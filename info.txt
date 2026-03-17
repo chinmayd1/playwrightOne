@@ -1,0 +1,12 @@
+playwright - node library 
+// node - https://nodejs.org/en/download - download and install
+// vs code - https://code.visualstudio.com/download - download and install
+// playwright install with js
+// playwright install with ts
+
+
+
+
+npm init playwright@latest
+npx playwright test               - headless mode
+npx playwright test --headed
