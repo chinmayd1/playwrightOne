@@ -5,8 +5,21 @@ playwright - node library
 // playwright install with ts
 
 
-
-
 npm init playwright@latest
 npx playwright test               - headless mode
 npx playwright test --headed
+npx playwright test --ui
+
+// day2
+
+// what is .gitignore ? - mentioned files are not added to git 
+// npm ? node pakage manager to install various js libraries
+// why npm install ? reads the package.json file and add dependencies to node_modules.
+// what is in package.json - meta information , dev dependencies and dependencies
+// How package.json is created - npm init @latest playwright
+
+// npm install  jquery - to install 
+// npm uninstall jquery - to uninstall
+// npm install jquery --save-dev
+
+// what yarn , pnpm ?
