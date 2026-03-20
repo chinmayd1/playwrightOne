@@ -9,6 +9,7 @@ npm init playwright@latest
 npx playwright test               - headless mode
 npx playwright test --headed
 npx playwright test --ui
+npx playwright test --debug
 
 // day2
 
