@@ -24,3 +24,12 @@ npx playwright test --debug
 // npm install jquery --save-dev
 
 // what yarn , pnpm ?
+
+// day 3?
+// Actual vs Expected   --- differences ----> bug
+// Why automation ? - Regression testing ? automation 
+// Business scenario ??  can be automated - yes - validation - No - playwright e2e --> 
+communication  between 2 applications or apps 
+// Component level testing - regression - yes -validation - yes - playwright yes -->
+communication  between application is not tested.
+3 A's ---> Arrangement ---> Action ---> Assertion
