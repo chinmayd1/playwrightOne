@@ -10,8 +10,6 @@ test('verify header', async ({ page }) => {
     // locator 
     // input[id ="input_firstName"]
 
-
-
     // id 
     // getByLabel()
     // getByPlaceholder()
@@ -36,7 +34,6 @@ test('verify header', async ({ page }) => {
     await page.locator('//input[@placeholder="Enter Your Name"]')
     await page.getByPlaceholder('Enter Your Name')
 
-
     // <label for="radio1"><input value="radio1" name="radioButton" class="radioButton" type="radio"> Radio1</label> action -check()
     await page.getByLabel('Radio1')
     await page.getByLabel('Radio2')
@@ -50,7 +47,6 @@ test('verify header', async ({ page }) => {
     await page.getByText('Open Window')
 
     // button , checkox , heading , link , listitem , textbox
-
     await page.getByRole('button',{name:"Open Tab"}).click()
     await page.getByRole('checkbox',{name:"Option1"}).check()
     const mainHeading = await page.getByRole('heading',{name:"Practice Page"})
