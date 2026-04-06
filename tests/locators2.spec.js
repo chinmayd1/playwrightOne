@@ -9,7 +9,7 @@ test('verify header', async ({ page }) => {
 
     // locator 
     // input[id ="input_firstName"]
-
+    // new
     // id 
     // getByLabel()
     // getByPlaceholder()

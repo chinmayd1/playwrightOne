@@ -9,9 +9,8 @@
 // @ts-check
 import { test, expect } from '@playwright/test'
 
-test.only('verify header', async ({ page }) => {
+test('verify header', async ({ page }) => {
     // Element selection method
-
     // first()
     // last()
     // nth()
@@ -25,5 +24,9 @@ test.only('verify header', async ({ page }) => {
     await page.locator('input[type="radio"]').nth(1).check()
     await page.locator('#product').first().locator("tr").filter({hasText:" Total Amount Collected: 296 "})
     await page.locator('#product').first().locator("tr").filter({has:page.locator('td')})
+    await page.locator('h1').and(page.locator('#name')) // chaining
+    let alertBtn = await page.locator('#alertbtn')
+    let confirmBtn = await page.locator('#confirmbtn')
+    await expect(alertBtn.or(confirmBtn)).toBeVisible()
 
 })
