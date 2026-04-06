@@ -14,7 +14,7 @@ test('verify header', async ({ page }) => {
     // Assertion 
     console.log(text)
     await expect(text).toEqual('Practice Page')
-
+    console.log("hello")
     // example
     // <input id="name" name="enter-name" class="inputs" placeholder="Enter Your Name" type="text">
     let inputElement = page.locator('#name')
