@@ -58,7 +58,12 @@ class RequestHandler {
 
       this.cleanupFields();
       const actualStatus = response.status();
-      responseJSON = await response.json();
+
+      try {
+        responseJSON = await response.json();
+      } catch (error) {
+        responseJSON = await response.text();
+      }
 
       this.logger.logResponse(actualStatus, responseJSON);
       this.statusCodeValidator(actualStatus, statusCode, this.getRequest);
@@ -163,10 +168,14 @@ class RequestHandler {
   }
 
   getHeaders() {
-    if (!this.clearAuthFlag) {
+    if (!this.clearAuthFlag && this.defaultAuthToken) {
       this.apiHeaders['Authorization'] =
-        this.apiHeaders['Authorization'] || this.defaultAuthToken;
+        this.apiHeaders['Authorization'] ||
+        (this.defaultAuthToken.startsWith('Bearer ')
+          ? this.defaultAuthToken
+          : `Bearer ${this.defaultAuthToken}`);
     }
+
     return this.apiHeaders;
   }
 
