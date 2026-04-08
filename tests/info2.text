@@ -647,3 +647,42 @@ test.describe('Meal Claims - GET + POST End To End', () => {
     console.log(`Claim results saved at: ${outputFile}`);
   });
 });
+
+////////////////////////////////////////////////////////////////////
+
+function buildMealClaimPayload(basePayload, updates = {}) {
+  const clonedBase = JSON.parse(JSON.stringify(basePayload));
+  return deepMerge(clonedBase, updates);
+}
+
+module.exports = { buildMealClaimPayload };
+
+
+
+////////////////////////////////////////////////////////////
+
+const updates = {
+  employeeId: packageId, // employeeId = packageId
+
+  startDate: payCycle?.payDate, // from GET call
+
+  substantiationList: [
+    {
+      ...testData.basePayload.substantiationList[0],
+      documentId: scenario.documentId, // from scenario
+    },
+  ],
+
+  expenseList: [
+    {
+      ...testData.basePayload.expenseList[0],
+      expenseDate: new Date().toISOString(), // today's date
+    },
+  ],
+};
+///////////////////////////////////////////////////////////////
+const finalPayload = buildMealClaimPayload(
+  testData.basePayload,
+  updates
+);
+console.log("-------------")
