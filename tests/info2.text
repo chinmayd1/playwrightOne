@@ -745,3 +745,21 @@ function extractClaimId(postResponse) {
   };
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////
+
+function extractClaimId(postResponse) {
+  const success = postResponse?.success ?? false;
+  const newClaimId = postResponse?.data?.newClaimId ?? null;
+  const claimDetails = postResponse?.data?.claimDetails ?? {};
+
+  if (!success || !newClaimId) {
+    throw new Error(
+      `Required claim response data not found in POST response: ${JSON.stringify(postResponse, null, 2)}`
+    );
+  }
+
+  return {
+    success,
+    newClaimId,
+    ...claimDetails,
+  };
+}
