@@ -686,3 +686,28 @@ const finalPayload = buildMealClaimPayload(
   updates
 );
 console.log("-------------")
+/////////////////////////////////////////////////////////////////////////
+
+
+const updates = {
+  ...scenario.payloadOverrides,   // 🔥 IMPORTANT
+
+  employeeId: packageId,
+  startDate: payCycle?.payDate,
+
+  substantiationList: [
+    {
+      ...testData.basePayload.substantiationList?.[0],
+      ...(scenario.payloadOverrides?.substantiationList?.[0] || {}),
+      documentId: scenario.documentId,
+    },
+  ],
+
+  expenseList: [
+    {
+      ...testData.basePayload.expenseList?.[0],
+      ...(scenario.payloadOverrides?.expenseList?.[0] || {}),
+      expenseDate: new Date().toISOString(),
+    },
+  ],
+};
