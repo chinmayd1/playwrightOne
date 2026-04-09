@@ -763,3 +763,51 @@ function extractClaimId(postResponse) {
     ...claimDetails,
   };
 }
+
+//////////////////////////////////////////////////////
+
+function extractClaimId(postResponse) {
+  const success = postResponse?.success ?? false;
+  const newClaimId = postResponse?.data?.newClaimId ?? null;
+  const claimDetails = postResponse?.data?.claimDetails ?? {};
+
+  if (!success || !newClaimId) {
+    throw new Error(
+      `Required claim response data not found in POST response: ${JSON.stringify(postResponse, null, 2)}`
+    );
+  }
+
+  return {
+    success,
+    newClaimId,
+    ...claimDetails,
+  };
+}
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+const path = require("path");
+const fs = require("fs");
+
+const testData = TestDataLoader.loadTestData([
+  ["RPA", "CreateNewClaim_Meal"],
+]);
+
+const environment = process.env.TEST_ENV || "UAT";
+
+const outputDir = path.join(
+  process.cwd(),
+  "testdata",
+  `${environment}_testFiles`
+);
+
+const outputFile = path.join(outputDir, "mealClaimResults.json");
+
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
+
+console.log("Saving file to:", outputFile);
+
+const results = [];
