@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test'
 
-test.only('Element state methods', async ({ page }) => {
+test('Element state methods', async ({ page }) => {
 
     // await page.goto("https://rahulshettyacademy.com/AutomationPractice/")
     // let headOne = await page.locator('h1')
