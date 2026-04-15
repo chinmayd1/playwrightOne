@@ -1,0 +1,220 @@
+//testdata/UAT/RPA.json
+
+
+{
+  "CreateNewClaim_Meal": {
+    "basePayload": {
+      "employeeId": 65032,
+      "caseNumber": "1233253",
+      "paymentPeriods": 1,
+      "paymentOnly": false,
+      "startDate": "",
+      "paymentReference": "",
+      "ongoingBenefit": false,
+      "payFromBalance": 0,
+      "creditorID": 64183,
+      "expenseList": [
+        {
+          "amount": 101,
+          "amountToBePaid": 101
+        }
+      ],
+      "substantiationList": [
+        {
+          "documentId": 7789094
+        }
+      ]
+    },
+    "scenarios": [
+      { "scenarioName": "TC01_Success", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "default" },
+      { "scenarioName": "TC02_CasualCustomer", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "casualCustomer" },
+      { "scenarioName": "TC03_NegativeProjectedBalance", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "negativeProjectedBalance" },
+      { "scenarioName": "TC04_InvalidClaimStatus", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "invalidClaimStatus" },
+      { "scenarioName": "TC05_LargeClaim", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "largeClaim" },
+      { "scenarioName": "TC06_DuplicateClaim", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "duplicateClaim" },
+      { "scenarioName": "TC07_GreaterThanBalance", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "greaterThanBalance" },
+      { "scenarioName": "TC08_FirstPayGreater", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "firstPayGreater" },
+      { "scenarioName": "TC09_SuccessDuplicate", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "duplicateClaim" },
+      { "scenarioName": "TC10_PayFromBalance", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "payFromBalance" },
+      { "scenarioName": "TC11_ReadyForReview", "packageId": 65032, "documentId": 7789094, "dbQueryKey": "readyForReview" }
+    ]
+  }
+}
+
+// claimDbQueries.js
+
+const dbQueries = {
+
+  default: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    ORDER BY CreatedDate DESC
+  `,
+
+  casualCustomer: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE CustomerType = 'Casual'
+    ORDER BY CreatedDate DESC
+  `,
+
+  negativeProjectedBalance: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE ProjectedBalance < 0
+    ORDER BY CreatedDate DESC
+  `,
+
+  invalidClaimStatus: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE ClaimStatus NOT IN ('Submitted','Ready for Review')
+    ORDER BY CreatedDate DESC
+  `,
+
+  largeClaim: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE ClaimAmount > 10000
+    ORDER BY CreatedDate DESC
+  `,
+
+  duplicateClaim: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    GROUP BY PackageId, DocumentId, AccountNumber, EmployeeId
+    HAVING COUNT(*) > 1
+  `,
+
+  greaterThanBalance: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE ClaimAmount > AvailableReimbursementBalance
+    ORDER BY CreatedDate DESC
+  `,
+
+  firstPayGreater: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE FirstPayAmount > AllowedPay
+    ORDER BY CreatedDate DESC
+  `,
+
+  payFromBalance: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE PayFromBalance = 1
+    ORDER BY CreatedDate DESC
+  `,
+
+  readyForReview: () => `
+    SELECT TOP 1 PackageId, DocumentId, AccountNumber, EmployeeId
+    FROM ClaimsTable
+    WHERE ClaimStatus = 'Ready for Review'
+    ORDER BY CreatedDate DESC
+  `
+};
+
+module.exports = { dbQueries };
+
+// claimDbHelper.js
+
+const DBUtil = require("../../../../util/DB_util");
+const { dbQueries } = require("./claimDbQueries");
+
+async function getScenarioDbValues(scenario) {
+  try {
+    const queryBuilder = dbQueries[scenario.dbQueryKey] || dbQueries.default;
+    const query = queryBuilder();
+
+    const result = await DBUtil.executeDBQuery(query);
+
+    if (!result || result.length === 0) {
+      console.log(`⚠️ Using fallback for ${scenario.scenarioName}`);
+      return {};
+    }
+
+    const row = result[0];
+
+    return {
+      packageId: row.PackageId ?? null,
+      documentId: row.DocumentId ?? null,
+      accountNumber: row.AccountNumber ?? null,
+      employeeId: row.EmployeeId ?? null,
+    };
+  } catch (e) {
+    console.log("DB error → fallback used", e);
+    return {};
+  }
+}
+
+module.exports = { getScenarioDbValues };
+
+//ClaimsMealEndToEnd.spec.js
+
+const { test, expect } = require("../../../../fixtures/fixtures");
+const path = require("path");
+const fs = require("fs");
+
+const TestDataLoader = require("../../../../PlaywrightFramework/testdataloader");
+
+const { getScenarioDbValues } = require("../helpers/claimDbHelper");
+const { buildMealClaimPayload } = require("../helpers/payloadBuilder");
+
+const {
+  getClaimPageData,
+  getNextOrCurrentPayCycle,
+  createMealClaim,
+  extractClaimInfo
+} = require("../helpers/claimsHelper");
+
+test("Meal Claim End to End", async ({ requestHandler }) => {
+
+  const testData = TestDataLoader.loadTestData([
+    ["RPA", "CreateNewClaim_Meal"]
+  ]);
+
+  const results = [];
+
+  for (const originalScenario of testData.scenarios) {
+
+    const dbValues = await getScenarioDbValues(originalScenario);
+
+    const scenario = {
+      ...originalScenario,
+      packageId: dbValues.packageId ?? originalScenario.packageId,
+      documentId: dbValues.documentId ?? originalScenario.documentId,
+      employeeId: dbValues.employeeId ?? testData.basePayload.employeeId
+    };
+
+    const getResponse = await getClaimPageData(requestHandler, scenario.packageId);
+
+    const payCycle = getNextOrCurrentPayCycle(getResponse.data.payCyclesList);
+
+    const updates = {
+      employeeId: scenario.employeeId,
+      startDate: payCycle.payDate,
+      substantiationList: [{ documentId: scenario.documentId }],
+      expenseList: [{
+        ...testData.basePayload.expenseList[0],
+        ...(scenario.payloadOverrides?.expenseList?.[0] || {}),
+        expenseDate: new Date().toISOString()
+      }]
+    };
+
+    const payload = buildMealClaimPayload(testData.basePayload, updates);
+
+    const postResponse = await createMealClaim(requestHandler, payload);
+
+    const claimInfo = extractClaimInfo(postResponse);
+
+    results.push({
+      scenario: scenario.scenarioName,
+      ...claimInfo
+    });
+  }
+
+  const filePath = path.join(process.cwd(), "testdata/UAT_testFiles/mealClaimResults.json");
+
+  fs.writeFileSync(filePath, JSON.stringify(results, null, 2));
+});
