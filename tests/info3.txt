@@ -1,0 +1,342 @@
+//testdata/UAT/RPA.json
+{
+  "CreateNewClaim_Meal": {
+    "basePayload": {
+      "claimOnlineId": 0,
+      "claimCodeId": 1,
+      "employeeId": 65032,
+      "caseNumber": "1233253",
+      "paymentPeriods": 1,
+      "paymentOnly": false,
+      "startDate": "",
+      "paymentReference": "",
+      "ongoingBenefit": false,
+      "payFromBalance": 0,
+      "creditorID": 64183,
+      "expenseList": [
+        {
+          "expenseID": 0,
+          "claimID": 0,
+          "substantiationMethodID": 0,
+          "expenseTypeID": 6,
+          "benefit_ID": 38701,
+          "expenseDate": "",
+          "amount": 101,
+          "expenseNumber": "1233213",
+          "amountToBePaid": 101,
+          "benFunction_ID": 7,
+          "benefitCode": "MEALSCAP",
+          "expenseStatusCode": "Approved",
+          "paymentSchedule": 1,
+          "deductionSchedule": 2
+        }
+      ],
+      "substantiationList": [
+        {
+          "substantiationID": 0,
+          "expenseID": 0,
+          "claimCodeId": 1,
+          "documentId": 0
+        }
+      ]
+    },
+    "processClaimBasePayload": {
+      "referenceNumber": "",
+      "claimOnlineId": 0,
+      "claimCodeId": 1,
+      "employeeId": 0,
+      "caseNumber": "",
+      "paymentPeriods": 1,
+      "paymentOnly": false,
+      "startDate": "",
+      "paymentReference": "",
+      "ongoingBenefit": false,
+      "payFromBalance": 0,
+      "creditorID": 0,
+      "isProcess": true,
+      "expenseList": [{}],
+      "substantiationList": [{}]
+    },
+    "scenarios": [
+      {
+        "scenarioName": "TC01_Success",
+        "accountNumber": "1195954",
+        "packageId": 65032,
+        "documentId": 7789094,
+        "employeeId": 65032,
+        "process": true
+      },
+      {
+        "scenarioName": "TC02_UpdateAmount",
+        "accountNumber": "1195954",
+        "packageId": 65032,
+        "documentId": 7789094,
+        "employeeId": 65032,
+        "process": false,
+        "payloadOverrides": {
+          "expenseList": [
+            {
+              "amountToBePaid": 250
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////
+helpers/payloadBuilder.js
+function isObject(item) {
+  return item && typeof item === "object" && !Array.isArray(item);
+}
+
+function deepMerge(target, source) {
+  const output = { ...target };
+
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach((key) => {
+      if (isObject(source[key])) {
+        output[key] =
+          key in target ? deepMerge(target[key], source[key]) : source[key];
+      } else if (Array.isArray(source[key])) {
+        output[key] = source[key];
+      } else {
+        output[key] = source[key];
+      }
+    });
+  }
+
+  return output;
+}
+
+function buildMealClaimPayload(basePayload, updates = {}) {
+  const clonedBase = JSON.parse(JSON.stringify(basePayload));
+  return deepMerge(clonedBase, updates);
+}
+
+function getReferenceNumber(paymentReference) {
+  if (!paymentReference) return null;
+  return paymentReference.split("-000")[0];
+}
+
+function buildProcessClaimPayloadFromTemplate(baseTemplate, createClaimResponse, overrides = {}) {
+  const body = createClaimResponse?.body ?? createClaimResponse;
+  const data = body?.data ?? {};
+  const claimDetails = data?.claimDetails ?? {};
+  const claimExpenseDetails = data?.claimExpenseDetails ?? [];
+  const substantiationList = data?.substantiationList ?? [];
+
+  const responseMappedPayload = {
+    referenceNumber: getReferenceNumber(claimDetails.paymentReference),
+    claimOnlineId: claimDetails.claimOnlineId ?? data?.newClaimId ?? 0,
+    claimCodeId: claimDetails.claimCodeId ?? baseTemplate.claimCodeId,
+    employeeId: claimDetails.employeeId ?? baseTemplate.employeeId,
+    caseNumber: String(claimDetails.caseNumber ?? baseTemplate.caseNumber ?? ""),
+    paymentPeriods: claimDetails.paymentPeriods ?? baseTemplate.paymentPeriods,
+    paymentOnly: claimDetails.paymentOnly ?? baseTemplate.paymentOnly,
+    startDate: claimDetails.startDate ?? baseTemplate.startDate,
+    paymentReference: claimDetails.paymentReference ?? baseTemplate.paymentReference,
+    ongoingBenefit: claimDetails.ongoingBenefit ?? baseTemplate.ongoingBenefit,
+    payFromBalance: claimDetails.payFromBalance ?? baseTemplate.payFromBalance,
+    creditorID: claimDetails.creditorID ?? baseTemplate.creditorID,
+    isProcess: true,
+    expenseList: claimExpenseDetails.length
+      ? claimExpenseDetails.map((item, index) => ({
+          ...(baseTemplate.expenseList?.[index] || baseTemplate.expenseList?.[0] || {}),
+          expenseID: item.expenseID,
+          expenseName: item.expenseName ?? null,
+          claimID: item.claimID,
+          substantiationMethodID: item.substantiationMethodID,
+          expenseTypeID: item.expenseTypeID,
+          benefit_ID: item.benefit_ID,
+          expenseDate: item.expenseDate,
+          amount: item.amount,
+          expenseNumber: item.expenseNumber,
+          expenseProvider: item.expenseProvider ?? null,
+          gst: item.gst ?? null,
+          userCreate: item.userCreate ?? null,
+          dateCreate: item.dateCreate ?? null,
+          expenseStatusID: item.expenseStatusID,
+          userModify: item.userModify ?? null,
+          dateModify: item.dateModify ?? null,
+          invoiceDate: item.invoiceDate ?? null,
+          sequence: item.sequence ?? null,
+          amountToBePaid: item.amountToBePaid,
+          gstToBePaid: item.gstToBePaid ?? null,
+          policyStartDate: item.policyStartDate ?? null,
+          policyEndDate: item.policyEndDate ?? null,
+          propVehicleId: item.propVehicleId ?? null,
+          benFunction_ID: item.benFunction_ID,
+          benefitCode: item.benefitCode,
+          expenseStatusCode: item.expenseStatusCode,
+          reasons: item.reasons ?? [],
+          ben_CLAIM_ITC: item.ben_CLAIM_ITC ?? false,
+          alignPaymentToPayDate: item.alignPaymentToPayDate ?? false,
+          allowReimbursementCreditors: item.allowReimbursementCreditors ?? true,
+          allowExclusiveCreditors: item.allowExclusiveCreditors ?? false,
+          allowSharedCreditors: item.allowSharedCreditors ?? false,
+          paymentSchedule: item.paymentSchedule,
+          deductionSchedule: item.deductionSchedule
+        }))
+      : JSON.parse(JSON.stringify(baseTemplate.expenseList || [])),
+    substantiationList: substantiationList.length
+      ? substantiationList.map((item, index) => ({
+          ...(baseTemplate.substantiationList?.[index] || baseTemplate.substantiationList?.[0] || {}),
+          substantiationID: item.substantiationID,
+          expenseID: item.expenseID,
+          claimCodeId: item.claimCodeId,
+          documentId: item.documentId,
+          userCreate: item.userCreate ?? null,
+          dateCreate: item.dateCreate ?? null,
+          deleted: item.deleted ?? false,
+          documentURL: item.documentURL ?? null
+        }))
+      : JSON.parse(JSON.stringify(baseTemplate.substantiationList || []))
+  };
+
+  return deepMerge(
+    JSON.parse(JSON.stringify(baseTemplate)),
+    deepMerge(responseMappedPayload, overrides)
+  );
+}
+
+module.exports = {
+  buildMealClaimPayload,
+  buildProcessClaimPayloadFromTemplate,
+  deepMerge,
+  getReferenceNumber
+};
+
+////////////////////////////////////////////////////////////////////////////
+
+async function getClaimPageData(requestHandler, packageId) {
+  return await requestHandler
+    .path("/packagemanagement/Claims/GetClaimPage")
+    .params({ PackageId: packageId })
+    .getRequest(200);
+}
+
+function getNextOrCurrentPayCycle(list = []) {
+  const today = new Date();
+
+  return (
+    list
+      .filter(x => new Date(x.payDate) >= today)
+      .sort((a, b) => new Date(a.payDate) - new Date(b.payDate))[0] ||
+    list.sort((a, b) => new Date(b.payDate) - new Date(a.payDate))[0]
+  );
+}
+
+async function createMealClaim(requestHandler, payload) {
+  return await requestHandler
+    .path("/packagemanagement/Claims/CreateClaim")
+    .body({ command: payload })
+    .postRequest(200);
+}
+
+function extractClaimInfo(res) {
+  const data = res?.body?.data || {};
+
+  if (!data?.newClaimId) {
+    throw new Error("Claim creation failed");
+  }
+
+  return {
+    newClaimId: data.newClaimId,
+    ...data.claimDetails
+  };
+}
+
+async function saveClaim(requestHandler, payload) {
+  return await requestHandler
+    .path("/packagemanagement/Claims/SaveClaim")
+    .body(payload)
+    .postRequest(200);
+}
+
+module.exports = {
+  getClaimPageData,
+  getNextOrCurrentPayCycle,
+  createMealClaim,
+  extractClaimInfo,
+  saveClaim
+};
+
+//////////////////////////////////////////////////////////////////////
+tests/ClaimsMealEndToEnd.spec.js
+const fs = require("fs");
+const path = require("path");
+
+const { test, expect } = require("../../../../fixtures/fixtures");
+const TestDataLoader = require("../../../../PlaywrightFramework/testdataloader");
+
+const {
+  buildMealClaimPayload,
+  buildProcessClaimPayloadFromTemplate
+} = require("../helpers/payloadBuilder");
+
+const {
+  getClaimPageData,
+  getNextOrCurrentPayCycle,
+  createMealClaim,
+  extractClaimInfo,
+  saveClaim
+} = require("../helpers/claimsHelper");
+
+test("Meal Claim End-to-End", async ({ requestHandler }) => {
+
+  const testData = TestDataLoader.loadTestData([
+    ["RPA", "CreateNewClaim_Meal"]
+  ]);
+
+  const results = [];
+
+  for (const scenario of testData.scenarios) {
+
+    const getRes = await getClaimPageData(requestHandler, scenario.packageId);
+    const payCycle = getNextOrCurrentPayCycle(getRes.data.payCyclesList);
+
+    const createPayload = buildMealClaimPayload(testData.basePayload, {
+      employeeId: scenario.employeeId,
+      startDate: payCycle.payDate,
+      substantiationList: [{ documentId: scenario.documentId }],
+      expenseList: [
+        {
+          expenseDate: new Date().toISOString(),
+          ...(scenario.payloadOverrides?.expenseList?.[0] || {})
+        }
+      ]
+    });
+
+    const createRes = await createMealClaim(requestHandler, createPayload);
+    const claimInfo = extractClaimInfo(createRes);
+
+    let processRes = null;
+
+    if (scenario.process) {
+      const processPayload = buildProcessClaimPayloadFromTemplate(
+        testData.processClaimBasePayload,
+        createRes
+      );
+
+      processRes = await saveClaim(requestHandler, processPayload);
+    }
+
+    results.push({
+      scenario: scenario.scenarioName,
+      claimId: claimInfo.newClaimId,
+      processed: scenario.process
+    });
+
+    console.log(`✔ ${scenario.scenarioName} done`);
+  }
+
+  const outputPath = path.join("testdata", "mealResults.json");
+  fs.writeFileSync(outputPath, JSON.stringify(results, null, 2));
+});
+//////////////////////////////////////////////////////////////////////////
+
+
+
