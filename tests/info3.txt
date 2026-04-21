@@ -339,4 +339,16 @@ test("Meal Claim End-to-End", async ({ requestHandler }) => {
 //////////////////////////////////////////////////////////////////////////
 
 
+ /**
+   * Process (save) an existing claim
+   * @param {object} payload - Process claim payload
+   * @returns {Promise<object>} API response
+   */
+  async saveClaim(payload) {
+    return await this.requestHandler
+      .path(`${this.basePath}/SaveClaim`)
+      .headers(this.defaultHeaders)
+      .body(payload)
+      .postRequest(200);
+  }
 
