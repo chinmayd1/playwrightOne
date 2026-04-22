@@ -352,3 +352,11 @@ test("Meal Claim End-to-End", async ({ requestHandler }) => {
       .postRequest(200);
   }
 
+
+const sameExpenseDate = new Date().toISOString();
+
+expenseList: (testData.basePayload.expenseList || []).map((expense, index) => ({
+  ...expense,
+  ...(scenario.payloadOverrides?.expenseList?.[index] || {}),
+  expenseDate: sameExpenseDate,
+})),
