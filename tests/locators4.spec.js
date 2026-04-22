@@ -2,7 +2,7 @@
 // Element state methods
 
 // isVisible()
-// isHdden()
+// isHidden()
 // isChecked()
 // isEnabled()
 // isDisabled()
