@@ -58,9 +58,12 @@ test.only('Element state methods', async ({ page }) => {
 
     // <h1 display= "none">heading</h1>
     // <h1 display= "block">heading</h1>
+    // Figma -- html css --> webpage , tab , mobile 
 
-
-
+    let box = await page.locator('h1').boundingBox()
+    console.log(box)
+    // assertion
+    expect(box.height).toBe(48)
 
 
 
