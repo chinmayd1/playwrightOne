@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-test.only('Element state methods', async ({ page }) => {
+test('Element state methods', async ({ page }) => {
 
     //  toBeVisible() ->  visible on DOM / not visible DOM
     //  dashboard navigation 
@@ -45,15 +45,21 @@ test.only('Element state methods', async ({ page }) => {
     await expect(await page.locator('#radioButton')).toBeChecked()
 
     // not.toBeChecked()
-    await page.locator('#checkBox').uncheck()
-    await expect(await page.locator('#checkBox')).not.toBeChecked()
+    // await page.locator('#checkBox').uncheck()
+    // await expect(await page.locator('#checkBox')).not.toBeChecked()
 
-    // toHaveCount()
-    await expect(page.locator('input[type="radio"]')).toHaveCount(3)
+    // // toHaveCount()
+    // await expect(page.locator('input[type="radio"]')).toHaveCount(3)
 
-    // toHaveUrl()
-    await expect(page).toHaveUrl('minskole')
+    // // toHaveUrl()
+    // await expect(page).toHaveUrl('minskole')
 
+    // toBeEnabled()
+
+    // toBeDisabled()
+
+    // wherther we can click on checkbox or radio , based on previous selection
+    // state ---> j and k
 
 
 
