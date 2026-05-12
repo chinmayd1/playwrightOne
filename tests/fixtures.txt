@@ -1,0 +1,8 @@
+
+// inbuilt fixtures              customized fixture
+
+// page , browser                  login
+
+// A fixture is a  reusable object / resource directly provided to your test
+
+
