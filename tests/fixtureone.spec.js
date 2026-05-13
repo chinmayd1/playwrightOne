@@ -96,7 +96,7 @@ test('check title for broswer fixture', async ({ browser }) => {
     // context 
     // page
     let mode1 = await browser.newContext()
-    let mode1 = await broswer.newContext()
+    let mode1 = await browser.newContext()
     
     let page1 = mode1.newPage()
     let page2 = mode2.newPage()
