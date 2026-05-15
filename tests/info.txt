@@ -71,3 +71,57 @@ test('Validate PDF content', async ({ page }) => {
   expect(data.text).toContain('Payroll Number');
 
 });
+//////////////////////////////////////
+
+const fs = require("fs");
+const { test, expect } = require("@playwright/test");
+
+test("Validate Activity Statement PDF", async ({ page }) => {
+
+  // Wait for PDF API response
+  const pdfResponsePromise = page.waitForResponse(resp =>
+    resp.url().includes("GetReportDocument") &&
+    resp.status() === 200
+  );
+
+  // Open report
+  await PackagePage.hoverOnMainMenuAndClickSubMenu(
+    "Reports",
+    TestData.subMenu
+  );
+
+  // Get PDF response
+  const pdfResponse = await pdfResponsePromise;
+
+  // Validate response status
+  expect(pdfResponse.status()).toBe(200);
+
+  // Read PDF buffer
+  const pdfBuffer = await pdfResponse.body();
+
+  // Validate actual PDF file
+  expect(pdfBuffer.slice(0, 5).toString()).toBe("%PDF-");
+
+  // Validate PDF not empty/corrupt
+  expect(pdfBuffer.length).toBeGreaterThan(1000);
+
+  // Convert PDF binary into readable string
+  const pdfContent = pdfBuffer.toString("latin1");
+
+  console.log(pdfContent);
+
+  // Validate content from binary
+  expect(pdfContent).toContain("ALEXIS");
+  expect(pdfContent).toContain("Activity");
+  expect(pdfContent).toContain("Payroll");
+
+  // Save PDF for debugging/evidence
+  fs.writeFileSync("activity-statement.pdf", pdfBuffer);
+
+  // Validate PDF viewer opened
+  await expect(
+    page.locator("iframe, canvas").first()
+  ).toBeVisible();
+
+  console.log("PDF validated successfully");
+});
