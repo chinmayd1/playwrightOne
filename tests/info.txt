@@ -33,3 +33,41 @@ communication  between 2 applications or apps
 // Component level testing - regression - yes -validation - yes - playwright yes -->
 communication  between application is not tested.
 3 A's ---> Arrangement ---> Action ---> Assertion
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+import { test, expect } from '@playwright/test';
+import fs from 'fs';
+import pdf from 'pdf-parse';
+
+test('Validate PDF content', async ({ page }) => {
+
+  const pdfResponsePromise = page.waitForResponse(response =>
+    response.url().includes('/WebReport') &&
+    response.status() === 200
+  );
+
+  await page.goto(
+    'https://salpac-uat01.test.smart.com.au/packagemanagement/spas?employeeId=278958'
+  );
+
+  const response = await pdfResponsePromise;
+
+  // Get PDF buffer
+  const pdfBuffer = await response.body();
+
+  // Save PDF (optional)
+  fs.writeFileSync('spas-report.pdf', pdfBuffer);
+
+  // Parse PDF
+  const data = await pdf(pdfBuffer);
+
+  console.log(data.text);
+
+  // Validate content
+  expect(data.text).toContain('Activity Statement');
+
+  expect(data.text).toContain('ALEXIS ALEXIS');
+
+  expect(data.text).toContain('Payroll Number');
+
+});
