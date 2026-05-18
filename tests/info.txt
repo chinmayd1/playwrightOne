@@ -407,3 +407,48 @@ test("Read PDF values from GetReportDocument response", async ({ page }) => {
   console.log("PDF values validated successfully");
 });
 
+////////////////////////////////////////////////////////////////////////////////
+
+
+const fs = require("fs");
+const pdf = require("pdf-parse");
+const { test, expect } = require("@playwright/test");
+
+test("Read values from GetReportDocument PDF response", async ({ page }) => {
+  const pdfResponsePromise = page.waitForResponse(resp =>
+    resp.url().includes("/WebReports/GetReportDocument") &&
+    resp.status() === 200
+  );
+
+  await PackagePage.hoverOnMainMenuAndClickSubMenu(
+    "Reports",
+    TestData.subMenu
+  );
+
+  const pdfResponse = await pdfResponsePromise;
+
+  console.log("PDF API URL:", pdfResponse.url());
+  console.log("PDF API Content-Type:", pdfResponse.headers()["content-type"]);
+
+  expect(pdfResponse.url()).toContain("GetReportDocument");
+
+  const pdfBuffer = await pdfResponse.body();
+
+  expect(pdfBuffer.slice(0, 5).toString()).toBe("%PDF-");
+  expect(pdfBuffer.length).toBeGreaterThan(1000);
+
+  fs.writeFileSync("activity-statement.pdf", pdfBuffer);
+
+  const pdfData = await pdf(pdfBuffer);
+  const pdfText = pdfData.text;
+
+  console.log("PDF TEXT:", pdfText);
+
+  expect(pdfText).toMatch(/Payment\s+Services\s+Activity\s+Statement/i);
+  expect(pdfText).toMatch(/ALEXIS\s+ALEXIS/i);
+  expect(pdfText).toMatch(/4004388/i);
+  expect(pdfText).toMatch(/01\s+Apr\s+2026/i);
+  expect(pdfText).toMatch(/18\s+May\s+2026/i);
+  expect(pdfText).toMatch(/Opening\s+Balance/i);
+  expect(pdfText).toMatch(/Spendable\s+Balance/i);
+});
