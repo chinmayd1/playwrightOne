@@ -314,3 +314,96 @@ test("Validate Activity Statement using source API", async ({ page }) => {
 
   await expect(page.locator("iframe, embed, canvas").first()).toBeVisible();
 });
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const fs = require("fs");
+const pdf = require("pdf-parse");
+const { test, expect } = require("@playwright/test");
+
+test("Read PDF values from GetReportDocument response", async ({ page }) => {
+
+  // Wait for PDF API response
+  const pdfResponsePromise = page.waitForResponse(
+    resp =>
+      resp.url().includes("GetReportDocument") &&
+      resp.status() === 200
+  );
+
+  // Open report
+  await PackagePage.hoverOnMainMenuAndClickSubMenu(
+    "Reports",
+    TestData.subMenu
+  );
+
+  // Capture API response
+  const pdfResponse = await pdfResponsePromise;
+
+  // Validate API
+  expect(pdfResponse.status()).toBe(200);
+
+  console.log("PDF URL:", pdfResponse.url());
+
+  // Read PDF binary response
+  const pdfBuffer = await pdfResponse.body();
+
+  // Validate actual PDF
+  expect(pdfBuffer.slice(0, 5).toString())
+    .toBe("%PDF-");
+
+  expect(pdfBuffer.length)
+    .toBeGreaterThan(1000);
+
+  // Save PDF for debugging
+  fs.writeFileSync(
+    "activity-statement.pdf",
+    pdfBuffer
+  );
+
+  // ===============================
+  // READ PDF CONTENT
+  // ===============================
+
+  const pdfData = await pdf(pdfBuffer);
+
+  const pdfText = pdfData.text;
+
+  console.log("FULL PDF TEXT:");
+  console.log(pdfText);
+
+  // ===============================
+  // VALIDATE PDF VALUES
+  // ===============================
+
+  expect(pdfText)
+    .toContain("Payment Services Activity Statement");
+
+  expect(pdfText)
+    .toContain("ALEXIS ALEXIS");
+
+  expect(pdfText)
+    .toContain("ROYAL CHILDREN'S HOSPITAL");
+
+  expect(pdfText)
+    .toContain("4004388");
+
+  expect(pdfText)
+    .toContain("01 Apr 2026");
+
+  expect(pdfText)
+    .toContain("18 May 2026");
+
+  expect(pdfText)
+    .toContain("Opening Balance");
+
+  expect(pdfText)
+    .toContain("Spendable Balance");
+
+  // Validate PDF viewer rendered
+  await expect(
+    page.locator("iframe, embed, canvas").first()
+  ).toBeVisible();
+
+  console.log("PDF values validated successfully");
+});
+
