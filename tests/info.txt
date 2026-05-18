@@ -452,3 +452,21 @@ test("Read values from GetReportDocument PDF response", async ({ page }) => {
   expect(pdfText).toMatch(/Opening\s+Balance/i);
   expect(pdfText).toMatch(/Spendable\s+Balance/i);
 });
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const iframe = page.locator("iframe");
+
+await expect(iframe).toBeVisible();
+const src = await iframe.getAttribute("src");
+expect(src).toContain("blob:");
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+console.log("----")
+
+
+
+
+
+
