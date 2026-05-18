@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Broswer ---> Context -----> Page
+// Browser ---> Context -----> Page
 
 test('Page fixture example', async ({ page }) => {
     await page.goto('https://rahulshettyacademy.com/AutomationPractice/')
@@ -35,7 +35,7 @@ test('request fixture - GET API call',async ({request})=>{
 // broswerName
 
 test("Page fixture example", async ({ page ,browserName}) => {
-    test.skip(browserName === "firefox")
+    test.skip(browserName === "firefox","skiping this test in firefox")
     await page.goto('https://rahulshettyacademy.com/AutomationPractice/')
     await page.locator('#name').fill("Rahul")
 })
