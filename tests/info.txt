@@ -472,6 +472,252 @@ expect(pdfText).toMatch(/Payroll\s+Number:\s*4004388/i);
 expect(pdfText).toMatch(/Account\s+No:\s*2022887/i);
 expect(pdfText).toMatch(/01\s+Apr\s+2026\s+to\s+18\s+May\s+2026/i);
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// One 
+
+import { test, expect } from "@playwright/test";
+
+test.only(
+  "[BAUT-T15203] Activity Statement",
+  { tag: "@Reports" },
+  async ({
+    urls,
+    page,
+    azureLoginPage,
+    step,
+    PackagePage,
+    pacmanReportsPage,
+    MyReporter,
+    TestDataLoader,
+    packageMgmtPage,
+  }) => {
+
+    MyReporter.suite("Azure Pacman Component Test Cases");
+    MyReporter.description("Salary Packaging Activity Statement");
+    MyReporter.epic("Reports");
+    MyReporter.link("BAUT-T15203");
+
+    // =========================
+    // TEST DATA
+    // =========================
+
+    const TestData = TestDataLoader.loadTestData([
+      ["Components", "activityStatement"],
+    ]);
+
+    // =========================
+    // LOGIN
+    // =========================
+
+    await step("Launch pacman URL", async () => {
+
+      await page.goto(urls.pacmanUrl);
+
+      await azureLoginPage.login(
+        process.env.AUTOMATION_USER_USERNAME,
+        process.env.AUTOMATION_USER_PASSWORD,
+      );
+
+    });
+
+    // =========================
+    // SEARCH ACCOUNT
+    // =========================
+
+    await step("Enter account number and search", async () => {
+
+      await packageMgmtPage.enterAccountNumber(
+        TestData.accountNumber
+      );
+
+      await packageMgmtPage.clickOnSearch();
+
+    });
+
+    // =========================
+    // SEARCH PACKAGE
+    // =========================
+
+    await step("Search with package id and select active package", async () => {
+
+      await packageMgmtPage.searchPackage(
+        TestData.packageID
+      );
+
+      await packageMgmtPage.selectActivePackageFromResults();
+
+    });
+
+    // =========================
+    // VALIDATE PDF REPORT
+    // =========================
+
+    await step("Validate Activity Statement PDF", async () => {
+
+      await pacmanReportsPage.validateReportPdf(TestData);
+
+    });
+
+  }
+);
+
+
+
+// Two
+import { expect } from "@playwright/test";
+import pdf from "pdf-parse";
+import fs from "fs";
+
+export default class PacmanReportsPage {
+
+  constructor(page) {
+    this.page = page;
+  }
+
+  async waitForPdfResponse() {
+
+    return await this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/WebReports/GetReportDocument") &&
+        resp.status() === 200
+    );
+
+  }
+
+  async clickReportSubMenu(subMenu) {
+
+    await this.hoverOnMainMenuAndClickSubMenu(
+      "Reports",
+      subMenu
+    );
+
+  }
+
+  async getPdfBuffer(pdfResponse) {
+
+    return await pdfResponse.body();
+
+  }
+
+  async validatePdfBuffer(pdfBuffer) {
+
+    expect(
+      pdfBuffer.slice(0, 5).toString()
+    ).toBe("%PDF-");
+
+    expect(
+      pdfBuffer.length
+    ).toBeGreaterThan(1000);
+
+  }
+
+  async savePdf(pdfBuffer, fileName = "activity-statement.pdf") {
+
+    fs.writeFileSync(fileName, pdfBuffer);
+
+  }
+
+  async extractPdfText(pdfBuffer) {
+
+    const pdfData = await pdf(pdfBuffer);
+
+    return pdfData.text;
+
+  }
+
+  async validatePdfValues(pdfText, expectedPdfValues) {
+
+    for (const expectedValue of expectedPdfValues) {
+
+      expect(pdfText).toMatch(
+        new RegExp(expectedValue, "i")
+      );
+
+    }
+
+  }
+
+  async validatePdfViewerVisible() {
+
+    const iframe = this.page.locator("iframe");
+
+    await expect(iframe).toBeVisible();
+
+    const src = await iframe.getAttribute("src");
+
+    expect(src).toContain("blob:");
+
+  }
+
+  async validateReportPdf(testData) {
+
+    const pdfResponsePromise =
+      this.waitForPdfResponse();
+
+    await this.clickReportSubMenu(
+      testData.subMenu
+    );
+
+    const pdfResponse =
+      await pdfResponsePromise;
+
+    console.log(
+      "PDF API URL:",
+      pdfResponse.url()
+    );
+
+    const pdfBuffer =
+      await this.getPdfBuffer(pdfResponse);
+
+    await this.validatePdfBuffer(pdfBuffer);
+
+    await this.savePdf(pdfBuffer);
+
+    const pdfText =
+      await this.extractPdfText(pdfBuffer);
+
+    console.log("PDF TEXT:", pdfText);
+
+    await this.validatePdfValues(
+      pdfText,
+      testData.expectedPdfValues
+    );
+
+    await this.validatePdfViewerVisible();
+
+  }
+
+}
+// Three
+
+"activityStatement": {
+  "accountNumber": "2022887",
+  "packageID": "278958",
+  "subMenu": "Activity Statement",
+
+  "expectedPdfValues": [
+    "ALEXIS\\s+ALEXIS",
+    "4004388",
+    "Account\\s+No:\\s*2022887",
+    "01\\s+Apr\\s+2026",
+    "18\\s+May\\s+2026",
+    "Opening\\s+Balance",
+    "Spendable\\s+Balance"
+  ]
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
