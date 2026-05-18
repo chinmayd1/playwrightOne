@@ -247,3 +247,70 @@ test("Validate Activity Statement using source API", async ({ page }) => {
 
   await expect(page.locator("iframe, embed, canvas").first()).toBeVisible();
 });
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+const fs = require("fs");
+const { test, expect } = require("@playwright/test");
+
+test("Validate Activity Statement using source API", async ({ page }) => {
+  const jsonResponses = [];
+
+  page.on("response", async (response) => {
+    const contentType = response.headers()["content-type"] || "";
+
+    if (
+      response.status() === 200 &&
+      contentType.includes("application/json")
+    ) {
+      try {
+        const data = await response.json();
+
+        jsonResponses.push({
+          url: response.url(),
+          data
+        });
+      } catch (e) {}
+    }
+  });
+
+  const pdfResponsePromise = page.waitForResponse(resp =>
+    resp.url().includes("GetReportDocument") &&
+    resp.status() === 200
+  );
+
+  await PackagePage.hoverOnMainMenuAndClickSubMenu(
+    "Reports",
+    TestData.subMenu
+  );
+
+  const pdfResponse = await pdfResponsePromise;
+  const pdfBuffer = await pdfResponse.body();
+
+  expect(pdfBuffer.slice(0, 5).toString()).toBe("%PDF-");
+  expect(pdfBuffer.length).toBeGreaterThan(1000);
+
+  fs.writeFileSync("activity-statement.pdf", pdfBuffer);
+
+  await page.waitForTimeout(3000);
+
+  const matchedApi = jsonResponses.find(api =>
+    JSON.stringify(api.data).toLowerCase().includes("alexis")
+  );
+
+  expect(matchedApi).toBeTruthy();
+
+  console.log("Matched API URL:", matchedApi.url);
+  console.log("Matched API Data:", JSON.stringify(matchedApi.data, null, 2));
+
+  const sourceData = JSON.stringify(matchedApi.data);
+
+  expect(sourceData).toMatch(/Alexis\s+Alexis/i);
+  expect(sourceData).toMatch(/4004388/i);
+  expect(sourceData).toMatch(/Royal\s+Children/i);
+  expect(sourceData).toMatch(/01\s+Apr\s+2026/i);
+  expect(sourceData).toMatch(/18\s+May\s+2026/i);
+
+  await expect(page.locator("iframe, embed, canvas").first()).toBeVisible();
+});
