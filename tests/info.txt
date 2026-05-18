@@ -465,6 +465,12 @@ expect(src).toContain("blob:");
 
 console.log("----")
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+expect(pdfText).toMatch(/ALEXIS\s+ALEXIS/i);
+expect(pdfText).toMatch(/Payroll\s+Number:\s*4004388/i);
+expect(pdfText).toMatch(/Account\s+No:\s*2022887/i);
+expect(pdfText).toMatch(/01\s+Apr\s+2026\s+to\s+18\s+May\s+2026/i);
 
 
 
