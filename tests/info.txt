@@ -712,7 +712,362 @@ export default class PacmanReportsPage {
 
 
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+// ===============================================
+// COMMON REUSABLE METHODS - PACMAN REPORTS PAGE
+// ===============================================
+
+import { expect } from "@playwright/test";
+import pdf from "pdf-parse";
+
+export default class PacmanReportsPage {
+
+  constructor(page) {
+    this.page = page;
+  }
+
+  // ===============================================
+  // WAIT FOR PDF RESPONSE
+  // ===============================================
+
+  async waitForPdfResponse() {
+
+    return await this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/WebReports/GetReportDocument") &&
+        resp.status() === 200
+    );
+
+  }
+
+  // ===============================================
+  // CLICK REPORT SUBMENU
+  // ===============================================
+
+  async clickReportSubMenu(subMenu, PackagePage) {
+
+    await PackagePage.hoverOnMainMenuAndClickSubMenu(
+      "Reports",
+      subMenu
+    );
+
+  }
+
+  // ===============================================
+  // GET PDF BUFFER
+  // ===============================================
+
+  async getPdfBuffer(pdfResponse) {
+
+    return await pdfResponse.body();
+
+  }
+
+  // ===============================================
+  // EXTRACT PDF TEXT
+  // ===============================================
+
+  async extractPdfText(pdfBuffer) {
+
+    const pdfData = await pdf(pdfBuffer);
+
+    return pdfData.text;
+
+  }
+
+  // ===============================================
+  // COMPLETE COMMON PDF FLOW
+  // ===============================================
+
+  async getPdfText(testData, PackagePage) {
+
+    const pdfResponsePromise =
+      this.waitForPdfResponse();
+
+    await this.clickReportSubMenu(
+      testData.subMenu,
+      PackagePage
+    );
+
+    const pdfResponse =
+      await pdfResponsePromise;
+
+    const pdfBuffer =
+      await this.getPdfBuffer(pdfResponse);
+
+    const pdfText =
+      await this.extractPdfText(pdfBuffer);
+
+    return {
+      pdfResponse,
+      pdfText
+    };
+
+  }
+
+  // ===============================================
+  // VERIFY CONTENT LOADED
+  // ===============================================
+
+  async verifyContentLoaded(
+    page,
+    MyReporter,
+    pdfResponse,
+    pdfText
+  ) {
+
+    try {
+
+      expect(pdfResponse.status()).toBe(200);
+
+      expect(pdfText.length)
+        .toBeGreaterThan(1000);
+
+      await MyReporter.report(
+        page,
+        "✓ Complete report content loaded"
+      );
+
+    } catch (error) {
+
+      await MyReporter.report(
+        page,
+        "✗ Report content not loaded properly"
+      );
+
+      throw error;
+    }
+
+  }
+
+  // ===============================================
+  // GENERIC PDF TEXT VALIDATION
+  // ===============================================
+
+  async verifyPdfText(
+    page,
+    MyReporter,
+    pdfText,
+    expectedText,
+    label
+  ) {
+
+    try {
+
+      expect(pdfText).toMatch(
+        new RegExp(expectedText, "i")
+      );
+
+      await MyReporter.report(
+        page,
+        `✓ ${label} verified`
+      );
+
+    } catch (error) {
+
+      await MyReporter.report(
+        page,
+        `✗ ${label} not found`
+      );
+
+      throw error;
+    }
+
+  }
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+test.only(
+  "[BAUT-T15203] Activity Statement",
+  { tag: "@Reports" },
+  async ({
+    urls,
+    page,
+    azureLoginPage,
+    step,
+    PackagePage,
+    pacmanReportsPage,
+    MyReporter,
+    TestDataLoader,
+    packageMgmtPage,
+  }) => {
+
+    const TestData = TestDataLoader.loadTestData([
+      ["Components", "activityStatement"],
+    ]);
+
+    let pdfText;
+    let pdfResponse;
+
+    // ==========================================
+    // LOGIN
+    // ==========================================
+
+    await step("Launch pacman URL", async () => {
+
+      await page.goto(urls.pacmanUrl);
+
+      await azureLoginPage.login(
+        process.env.AUTOMATION_USER_USERNAME,
+        process.env.AUTOMATION_USER_PASSWORD,
+      );
+
+    });
+
+    // ==========================================
+    // SEARCH ACCOUNT
+    // ==========================================
+
+    await step("Enter account number and search", async () => {
+
+      await packageMgmtPage.enterAccountNumber(
+        TestData.accountNumber
+      );
+
+      await packageMgmtPage.clickOnSearch();
+
+    });
+
+    // ==========================================
+    // SEARCH PACKAGE
+    // ==========================================
+
+    await step("Search package and select active package", async () => {
+
+      await packageMgmtPage.searchPackage(
+        TestData.packageID
+      );
+
+      await packageMgmtPage.selectActivePackageFromResults();
+
+    });
+
+    // ==========================================
+    // GET PDF TEXT
+    // ==========================================
+
+    await step("Get PDF text", async () => {
+
+      const result =
+        await pacmanReportsPage.getPdfText(
+          TestData,
+          PackagePage
+        );
+
+      pdfText = result.pdfText;
+      pdfResponse = result.pdfResponse;
+
+    });
+
+    // ==========================================
+    // VERIFY CONTENT LOADED
+    // ==========================================
+
+    await step("Verify report content loaded", async () => {
+
+      await pacmanReportsPage.verifyContentLoaded(
+        page,
+        MyReporter,
+        pdfResponse,
+        pdfText
+      );
+
+    });
+
+    // ==========================================
+    // VERIFY REPORT HEADING
+    // ==========================================
+
+    await step("Verify report heading", async () => {
+
+      await pacmanReportsPage.verifyPdfText(
+        page,
+        MyReporter,
+        pdfText,
+        TestData.expectedReportHeading,
+        "Report Heading"
+      );
+
+    });
+
+    // ==========================================
+    // VERIFY EMPLOYEE NAME LABEL
+    // ==========================================
+
+    await step("Verify Employee Name label", async () => {
+
+      await pacmanReportsPage.verifyPdfText(
+        page,
+        MyReporter,
+        pdfText,
+        TestData.expectedEmployeeNameLabel,
+        "Employee Name Label"
+      );
+
+    });
+
+    // ==========================================
+    // VERIFY PAYROLL NUMBER LABEL
+    // ==========================================
+
+    await step("Verify Payroll Number label", async () => {
+
+      await pacmanReportsPage.verifyPdfText(
+        page,
+        MyReporter,
+        pdfText,
+        TestData.expectedPayrollNumberLabel,
+        "Payroll Number Label"
+      );
+
+    });
+
+    // ==========================================
+    // VERIFY EMPLOYER CODE LABEL
+    // ==========================================
+
+    await step("Verify Employer Code label", async () => {
+
+      await pacmanReportsPage.verifyPdfText(
+        page,
+        MyReporter,
+        pdfText,
+        TestData.expectedEmployerCodeLabel,
+        "Employer Code Label"
+      );
+
+    });
+
+  }
+);
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+{
+  "activityStatement": {
+    "accountNumber": "2022887",
+
+    "packageID": "278958",
+
+    "subMenu": "Activity Statement",
+
+    "expectedReportHeading":
+      "Payment\\s+Services\\s+Activity\\s+Statement",
+
+    "expectedEmployeeNameLabel":
+      "Employee\\s+Name",
+
+    "expectedPayrollNumberLabel":
+      "Payroll\\s+Number",
+
+    "expectedEmployerCodeLabel":
+      "Employer\\s+Name"
+  }
+}
 
 
 
