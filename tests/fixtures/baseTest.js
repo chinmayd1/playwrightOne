@@ -14,6 +14,7 @@ export const test = base.extend({
         await use(loginPage)
         // after the test run
     }
+
 })
 
 export {expect} from "@playwright/test"

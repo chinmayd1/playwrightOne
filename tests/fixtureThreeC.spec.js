@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test'
 const {LoginPage} = require('../tests/pages/LoginPage')
+const {Dashboard} = require('../tests/pages/DashboardPage')
 let loginPage;
+let dashboard;
 
 test.beforeEach(async({page})=>{
     loginPage = new  LoginPage(page)
+    dashboard = new  Dashboard(page)
+
     await loginPage.goto()
 })
 
