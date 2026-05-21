@@ -1071,6 +1071,125 @@ test.only(
 
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Page Function
+
+async validateRefreshFunctionality() {
+
+  await Promise.all([
+
+    this.page.waitForResponse(response =>
+      response.url().includes('/progressdata') &&
+      response.status() === 200
+    ),
+
+    this.refreshButton.click()
+
+  ]);
+
+  const expectedHeaders = [
+    'Bank',
+    'EmployerCode',
+    'PayGroup',
+    'Total',
+    'Processed',
+    'SubmittedBy',
+    'Status'
+  ];
+
+  for (const header of expectedHeaders) {
+
+    await expect(
+      this.page.locator(
+        `//span[contains(@class,'sortable-column-header') and normalize-space()='${header}']`
+      )
+    ).toBeVisible();
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Test File
+
+test('Validate Refresh Functionality', async ({ page }) => {
+
+  const paymentProgressPage = new PaymentProgressPage(page);
+
+  await paymentProgressPage.validateRefreshFunctionality();
+
+});
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// Page Class
+
+import { expect, Page } from '@playwright/test';
+
+export class PaymentProgressPage {
+
+  constructor(private page: Page) {}
+
+  readonly refreshButton = this.page.getByRole('button', {
+    name: 'REFRESH DATA'
+  });
+
+  // Validate Refresh Functionality
+  async validateRefreshFunctionality() {
+
+    await Promise.all([
+
+      this.page.waitForResponse(response =>
+        response.url().includes('/progressdata') &&
+        response.status() === 200
+      ),
+
+      this.refreshButton.click()
+
+    ]);
+  }
+
+  // Validate Table Headers
+  async validateTableHeaders() {
+
+    const expectedHeaders = [
+      'Bank',
+      'EmployerCode',
+      'PayGroup',
+      'Total',
+      'Processed',
+      'SubmittedBy',
+      'Status'
+    ];
+
+    for (const header of expectedHeaders) {
+
+      await expect(
+        this.page.locator(
+          `//span[contains(@class,'sortable-column-header') and normalize-space()='${header}']`
+        )
+      ).toBeVisible();
+    }
+  }
+}
+
+/---------------------------------------------------------------------------------------------------------------
+
+// Test File
+
+test('Validate Refresh Functionality and Headers', async ({ page }) => {
+
+  const paymentProgressPage = new PaymentProgressPage(page);
+
+  await paymentProgressPage.validateRefreshFunctionality();
+
+  await paymentProgressPage.validateTableHeaders();
+
+});
+
 
 
 
