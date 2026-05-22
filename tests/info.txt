@@ -1241,6 +1241,185 @@ async validateBankFilterUsingApiResponse() {
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+export default class reviewTab {
+
+    constructor(page) {
+
+        this.page = page;
+
+        // Buttons
+        this.button_LoadBatches = page.getByRole('button', {
+            name: 'LOAD BATCHES'
+        });
+
+        this.button_ConsolidateBatches = page.getByRole('button', {
+            name: 'Consolidate Batches'
+        });
+
+        this.button_RollbackBatches = page.getByRole('button', {
+            name: 'ROLLBACK BATCHES'
+        });
+
+        // Popup buttons
+        this.button_Yes = page.getByRole('button', {
+            name: 'Yes'
+        });
+
+        this.button_No = page.getByRole('button', {
+            name: 'No'
+        });
+
+        // Popups
+        this.popup_ApproveSelectedBatches =
+            page.getByText('Approve Selected Batches');
+
+        this.popup_RollbackSelectedBatches =
+            page.getByText('Rollback Selected Batches');
+
+        // Table
+        this.checkbox_FirstRow =
+            page.locator('tbody tr').nth(0).locator('input[type="checkbox"]');
+
+        this.input_BankFilter =
+            page.getByPlaceholder('Filter value').nth(0);
+
+        this.column_BankValues =
+            page.locator('tbody tr td').nth(1);
+
+    }
+
+    async validateBankFilterUsingApiResponse() {
+
+        const [response] = await Promise.all([
+            this.page.waitForResponse(response =>
+                response.url().includes('/GetBatchData') &&
+                response.status() === 200
+            ),
+            this.button_LoadBatches.click()
+        ]);
+
+        const responseArray = await response.json();
+
+        if (responseArray.length > 0) {
+
+            const bankName = responseArray[0].bank;
+
+            console.log(`Selected Bank Name: ${bankName}`);
+
+            await this.input_BankFilter.fill(bankName);
+
+            await this.page.waitForTimeout(2000);
+
+            const rowCount = await this.column_BankValues.count();
+
+            for (let i = 0; i < rowCount; i++) {
+
+                await expect(
+                    this.column_BankValues.nth(i)
+                ).toContainText(bankName);
+
+            }
+
+            console.log('Bank filter validation successful');
+
+        } else {
+
+            console.log('API response array is empty - Step Passed');
+
+        }
+    }
+
+    async validateConsolidateAndRollbackButtonsFunctionality() {
+
+        // Load batches
+        const [getBatchResponse] = await Promise.all([
+            this.page.waitForResponse(response =>
+                response.url().includes('/GetBatchData') &&
+                response.status() === 200
+            ),
+            this.button_LoadBatches.click()
+        ]);
+
+        const batchData = await getBatchResponse.json();
+
+        // If no records
+        if (batchData.length === 0) {
+
+            console.log('No batch records available - Step Passed');
+            return;
+        }
+
+        // Select first checkbox
+        await this.checkbox_FirstRow.click();
+
+        // Validate buttons enabled
+        await expect(this.button_ConsolidateBatches).toBeEnabled();
+        await expect(this.button_RollbackBatches).toBeEnabled();
+
+        // Consolidate -> NO
+        await this.button_ConsolidateBatches.click();
+
+        await expect(
+            this.popup_ApproveSelectedBatches
+        ).toBeVisible();
+
+        await this.button_No.click();
+
+        // Rollback -> NO
+        await this.button_RollbackBatches.click();
+
+        await expect(
+            this.popup_RollbackSelectedBatches
+        ).toBeVisible();
+
+        await this.button_No.click();
+
+        // Consolidate -> YES
+        await this.button_ConsolidateBatches.click();
+
+        const [approveResponse] = await Promise.all([
+            this.page.waitForResponse(response =>
+                response.url().includes('/ApproveBatches') &&
+                response.status() === 200
+            ),
+            this.button_Yes.click()
+        ]);
+
+        expect(approveResponse.status()).toBe(200);
+
+        console.log('Approve API successful');
+
+        // Reload batches
+        await Promise.all([
+            this.page.waitForResponse(response =>
+                response.url().includes('/GetBatchData') &&
+                response.status() === 200
+            ),
+            this.button_LoadBatches.click()
+        ]);
+
+        // Select checkbox again
+        await this.checkbox_FirstRow.click();
+
+        // Rollback -> YES
+        await this.button_RollbackBatches.click();
+
+        const [rollbackResponse] = await Promise.all([
+            this.page.waitForResponse(response =>
+                response.url().includes('/RollbackBatches') &&
+                response.status() === 200
+            ),
+            this.button_Yes.click()
+        ]);
+
+        expect(rollbackResponse.status()).toBe(200);
+
+        console.log('Rollback API successful');
+    }
+}
 
 
 
