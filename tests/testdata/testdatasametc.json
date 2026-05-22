@@ -1,0 +1,15 @@
+[
+
+    {
+        "testcase":"BAU-123",
+        "username":"chinmay",
+        "password":"123"
+    },
+    
+    {
+        "testcase":"BAU-1234",
+        "username":"chinmay2",
+        "password":"1234"
+    }
+
+]
