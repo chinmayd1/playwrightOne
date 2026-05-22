@@ -1190,7 +1190,55 @@ test('Validate Refresh Functionality and Headers', async ({ page }) => {
 
 });
 
+/////////////////////////////////////////////////////////////////////////
 
+async validateBankFilterUsingApiResponse() {
+
+    // Click button and wait for API response together
+    const [response] = await Promise.all([
+        this.page.waitForResponse(response =>
+            response.url().includes('/GetBatchData') &&
+            response.status() === 200
+        ),
+        this.button_LoadBatches.click()
+    ]);
+
+    const responseArray = await response.json();
+
+    // If API response has records
+    if (responseArray.length > 0) {
+
+        // Pick first bank name
+        const bankName = responseArray[0].bank;
+
+        console.log(`Selected Bank Name: ${bankName}`);
+
+        // Enter bank name in Bank filter textbox
+        await this.page
+            .locator("//input[@placeholder='Filter value']")
+            .nth(0)
+            .fill(bankName);
+
+        // Wait for table filtering
+        await this.page.waitForTimeout(2000);
+
+        // Validate all visible rows contain same bank
+        const bankColumnValues = this.page.locator("//table//tbody//tr//td[2]");
+
+        const rowCount = await bankColumnValues.count();
+
+        for (let i = 0; i < rowCount; i++) {
+            await expect(bankColumnValues.nth(i)).toContainText(bankName);
+        }
+
+        console.log('Bank filter validation successful');
+
+    } else {
+
+        console.log('API response array is empty - Step Passed');
+
+    }
+}
 
 
 
