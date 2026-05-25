@@ -1,4 +1,4 @@
-test('Validate Status dropdown values', async ({ page }) => {
+async validateStatusDropdown(page) {
 
     const expectedStatus = [
         'Pending',
@@ -13,23 +13,25 @@ test('Validate Status dropdown values', async ({ page }) => {
     // Click Bank dropdown
     await page.locator('input[aria-label="Bank"]').click();
 
-    // Select first bank option
-    const firstBank = page.locator('//div[@role="option"]').first();
+    // Select first bank value
+    const firstBankOption = page.locator('//div[@role="option"]').first();
 
-    const bankName = await firstBank.textContent();
+    const bankName = await firstBankOption.textContent();
 
-    console.log('Selected Bank : ', bankName);
+    console.log(`Selected Bank : ${bankName}`);
 
-    await firstBank.click();
+    await firstBankOption.click();
 
     // Click Status dropdown
     await page.locator('input[aria-label="Status"]').click();
 
-    // Validate status values
+    // Validate all status values
     for (const status of expectedStatus) {
 
         await expect(
             page.locator(`//div[@role="option" and normalize-space()="${status}"]`)
         ).toBeVisible();
     }
-});
+
+    console.log('All Status dropdown values are validated successfully');
+}
