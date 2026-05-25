@@ -1,49 +1,36 @@
-import { test, expect } from '@playwright/test';
+async validateStatusDropdown() {
 
-async function validateBankDropdown(page) {
+  const expectedStatus = [
+    'Pending',
+    'Generated',
+    'Approved',
+    'Uploaded',
+    'Accepted',
+    'Rejected',
+    'Cancelled'
+  ];
 
-    // Reload page and wait for API
-    const [bankApiResponse] = await Promise.all([
+  // Click Bank dropdown
+  await $('input[aria-label="Bank"]').click();
 
-        page.waitForResponse(response =>
-            response.url().includes('/GetBankCodes') &&
-            response.status() === 200
-        ),
+  // Select first value from Bank dropdown
+  const firstBankOption = await $$('//div[@role="option"]')[0];
+  const bankName = await firstBankOption.getText();
 
-        page.reload()
-    ]);
+  await firstBankOption.click();
 
-    // API response body
-    const responseBody = await bankApiResponse.json();
+  console.log(`Selected Bank: ${bankName}`);
 
-    // Extract bank codes from API
-    const apiBankValues = responseBody.map(bank =>
-        bank.bankCode.trim()
+  // Click Status dropdown
+  await $('input[aria-label="Status"]').click();
+
+  // Validate Status dropdown values
+  for (const status of expectedStatus) {
+
+    const statusOption = $(
+      `//div[@role="option" and normalize-space()="${status}"]`
     );
 
-    // Open Bank dropdown
-    await page.locator('input[aria-label="Bank"]').click();
-
-    // Wait for dropdown options
-    await page.waitForSelector('[role="option"]');
-
-    // Get UI dropdown values
-    const uiValues = await page
-        .locator('[role="option"]')
-        .allTextContents();
-
-    const actualUiValues = uiValues.map(value =>
-        value.trim()
-    );
-
-    // Validate UI vs API
-    expect(actualUiValues.sort())
-        .toEqual(apiBankValues.sort());
+    await expect(statusOption).toBeDisplayed();
+  }
 }
-
-test('Validate Bank Dropdown Values', async ({ page }) => {
-
-    await page.goto('https://salpac-uat01.test.smart.com.au/processpayments/submit');
-
-    await validateBankDropdown(page);
-});
