@@ -1,36 +1,58 @@
-async validateStatusDropdown() {
+import { test, expect } from '@playwright/test';
 
-  const expectedStatus = [
-    'Pending',
-    'Generated',
-    'Approved',
-    'Uploaded',
-    'Accepted',
-    'Rejected',
-    'Cancelled'
-  ];
+async function validateBankDropdown(page) {
 
-  // Click Bank dropdown
-  await $('input[aria-label="Bank"]').click();
+    // Reload page and wait for API response
+    const [bankApiResponse] = await Promise.all([
 
-  // Select first value from Bank dropdown
-  const firstBankOption = await $$('//div[@role="option"]')[0];
-  const bankName = await firstBankOption.getText();
+        page.waitForResponse(response =>
+            response.url().includes('/GetBankCodes') &&
+            response.status() === 200
+        ),
 
-  await firstBankOption.click();
+        page.reload()
+    ]);
 
-  console.log(`Selected Bank: ${bankName}`);
+    // Convert API response to JSON
+    const responseBody = await bankApiResponse.json();
 
-  // Click Status dropdown
-  await $('input[aria-label="Status"]').click();
-
-  // Validate Status dropdown values
-  for (const status of expectedStatus) {
-
-    const statusOption = $(
-      `//div[@role="option" and normalize-space()="${status}"]`
+    // Extract bank codes from API
+    const apiBankValues = responseBody.map(bank =>
+        bank.bankCode.trim()
     );
 
-    await expect(statusOption).toBeDisplayed();
-  }
+    console.log('API Values:', apiBankValues);
+
+    // Click Bank dropdown input
+    await page.locator('input[aria-label="Bank"]').click();
+
+    // Wait for dropdown options to appear
+    await page.waitForSelector('[role="option"]');
+
+    // Capture UI dropdown values
+    const uiValues = await page
+        .locator('[role="option"]')
+        .allTextContents();
+
+    // Remove extra spaces
+    const actualUiValues = uiValues.map(value =>
+        value.trim()
+    );
+
+    console.log('UI Values:', actualUiValues);
+
+    // Validate API vs UI
+    expect(actualUiValues.sort())
+        .toEqual(apiBankValues.sort());
 }
+
+test('Validate Bank Dropdown Values', async ({ page }) => {
+
+    // Open page
+    await page.goto(
+        'https://salpac-uat01.test.smart.com.au/processpayments/submit'
+    );
+
+    // Validate dropdown values
+    await validateBankDropdown(page);
+});
