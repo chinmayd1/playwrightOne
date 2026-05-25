@@ -10,28 +10,41 @@ async validateStatusDropdown(page) {
         'Cancelled'
     ];
 
-    // Click Bank dropdown
+    // Open Bank dropdown
     await page.locator('input[aria-label="Bank"]').click();
 
-    // Select first bank value
-    const firstBankOption = page.locator('//div[@role="option"]').first();
+    // Wait for bank options
+    await page.waitForSelector('[role="option"]');
+
+    // Select first bank
+    const firstBankOption = page.locator('[role="option"]').first();
 
     const bankName = await firstBankOption.textContent();
 
-    console.log(`Selected Bank : ${bankName}`);
+    console.log(`Selected Bank : ${bankName?.trim()}`);
 
     await firstBankOption.click();
 
-    // Click Status dropdown
+    // Open Status dropdown
     await page.locator('input[aria-label="Status"]').click();
 
-    // Validate all status values
-    for (const status of expectedStatus) {
+    // Wait for status dropdown options
+    await page.waitForSelector('[role="option"]');
 
-        await expect(
-            page.locator(`//div[@role="option" and normalize-space()="${status}"]`)
-        ).toBeVisible();
-    }
+    // Capture all status dropdown values
+    const actualStatusValues = await page
+        .locator('[role="option"]')
+        .allTextContents();
+
+    const formattedStatusValues = actualStatusValues.map(status =>
+        status.trim()
+    );
+
+    console.log('Actual Status Values :', formattedStatusValues);
+
+    // Validate expected vs actual status values
+    expect(formattedStatusValues.sort())
+        .toEqual(expectedStatus.sort());
 
     console.log('All Status dropdown values are validated successfully');
 }
