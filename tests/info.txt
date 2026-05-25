@@ -1,96 +1,49 @@
-async validateConsolidateAndRollbackButtonsFunctionality() {
+import { test, expect } from '@playwright/test';
 
-    // Load batches and wait for API
-    const [getBatchResponse] = await Promise.all([
-        this.page.waitForResponse(response =>
-            response.url().includes('/GetBatchData') &&
+async function validateBankDropdown(page) {
+
+    // Reload page and wait for API
+    const [bankApiResponse] = await Promise.all([
+
+        page.waitForResponse(response =>
+            response.url().includes('/GetBankCodes') &&
             response.status() === 200
         ),
-        this.button_LoadBatches.click()
+
+        page.reload()
     ]);
 
-    const batchData = await getBatchResponse.json();
+    // API response body
+    const responseBody = await bankApiResponse.json();
 
-    // If no records available
-    if (batchData.length === 0) {
+    // Extract bank codes from API
+    const apiBankValues = responseBody.map(bank =>
+        bank.bankCode.trim()
+    );
 
-        console.log('No batch records available - Step Passed');
-        return;
-    }
+    // Open Bank dropdown
+    await page.locator('input[aria-label="Bank"]').click();
 
-    // Directly select first checkbox
-    await this.checkbox_FirstRow.click();
+    // Wait for dropdown options
+    await page.waitForSelector('[role="option"]');
 
-    // Validate buttons enabled
-    await expect(this.button_ConsolidateBatches).toBeEnabled();
-    await expect(this.button_RollbackBatches).toBeEnabled();
+    // Get UI dropdown values
+    const uiValues = await page
+        .locator('[role="option"]')
+        .allTextContents();
 
-    // =========================
-    // Consolidate -> NO
-    // =========================
-    await this.button_ConsolidateBatches.click();
+    const actualUiValues = uiValues.map(value =>
+        value.trim()
+    );
 
-    await expect(
-        this.popup_ApproveSelectedBatches
-    ).toBeVisible();
-
-    await this.button_No.click();
-
-    // =========================
-    // Rollback -> NO
-    // =========================
-    await this.button_RollbackBatches.click();
-
-    await expect(
-        this.popup_RollbackSelectedBatches
-    ).toBeVisible();
-
-    await this.button_No.click();
-
-    // =========================
-    // Consolidate -> YES
-    // =========================
-    await this.button_ConsolidateBatches.click();
-
-    const [approveResponse] = await Promise.all([
-        this.page.waitForResponse(response =>
-            response.url().includes('/ApproveBatches') &&
-            response.status() === 200
-        ),
-        this.button_Yes.click()
-    ]);
-
-    expect(approveResponse.status()).toBe(200);
-
-    console.log('Approve API successful');
-
-    // =========================
-    // Reload and select again
-    // =========================
-    await Promise.all([
-        this.page.waitForResponse(response =>
-            response.url().includes('/GetBatchData') &&
-            response.status() === 200
-        ),
-        this.button_LoadBatches.click()
-    ]);
-
-    await this.checkbox_FirstRow.click();
-
-    // =========================
-    // Rollback -> YES
-    // =========================
-    await this.button_RollbackBatches.click();
-
-    const [rollbackResponse] = await Promise.all([
-        this.page.waitForResponse(response =>
-            response.url().includes('/RollbackBatches') &&
-            response.status() === 200
-        ),
-        this.button_Yes.click()
-    ]);
-
-    expect(rollbackResponse.status()).toBe(200);
-
-    console.log('Rollback API successful');
+    // Validate UI vs API
+    expect(actualUiValues.sort())
+        .toEqual(apiBankValues.sort());
 }
+
+test('Validate Bank Dropdown Values', async ({ page }) => {
+
+    await page.goto('https://salpac-uat01.test.smart.com.au/processpayments/submit');
+
+    await validateBankDropdown(page);
+});
