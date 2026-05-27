@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-test.only('Element state methods', async ({ page }) => {
+test('Element state methods', async ({ page }) => {
 
     // to HaveURL and toHaveTitle()
     // await page.goto("https://sauce-demo.myshopify.com/")

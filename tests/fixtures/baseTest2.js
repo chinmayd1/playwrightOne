@@ -21,6 +21,9 @@ export const test = base.extend({
             password:"Password123"
         }
         await use(data)
+    },
+    testData2:async({},use)=>{
+        await use(testData2)
     }
 })
 

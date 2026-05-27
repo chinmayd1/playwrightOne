@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures/baseTest2';
 
-test.only('Element state methods', async ({ page,loginIn ,dashboard}) => {
-    await loginIn.login("student","Password123")
+test('Element state methods', async ({ page,loginIn ,dashboard,testData}) => {
+    await loginIn.login(testData.username,testData.password)
     await dashboard.getLoginSuccess()
     await dashboard.logOutFunction()
 });
