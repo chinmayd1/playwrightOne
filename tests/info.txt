@@ -1,209 +1,248 @@
-// ======================================
-// LOCATORS
-// ======================================
+import { expect, Locator, Page } from "@playwright/test";
 
-constructor(page) {
+export default class submitTab {
 
-    this.page = page;
+    page: Page;
 
-    // Tabs
-    this.tab_Review = page.getByText('Review', { exact: true });
+    // Menu
+    sideMenu_Submit: Locator;
 
-    this.tab_Submit = page.getByText('Submit', { exact: true });
-
-    // Date inputs
-    this.input_FromDate = page.locator('input').nth(0);
-
-    this.input_ToDate = page.locator('input').nth(1);
+    // Inputs
+    input_FromDate: Locator;
+    input_ToDate: Locator;
 
     // Dropdowns
-    this.dropdown_Bank = page.locator('.mud-select').nth(0);
-
-    this.dropdown_Status = page.locator('.mud-select').nth(1);
+    dropdown_Bank: Locator;
+    dropdown_Status: Locator;
 
     // Buttons
-    this.button_ShowBankFiles = page.getByRole('button', {
-        name: 'SHOW BANK FILES'
-    });
-
-    // First row checkbox
-    this.checkbox_FirstSubmitRow = page
-        .locator('tbody tr')
-        .nth(0)
-        .locator('input.mud-checkbox-input');
-
-    // File status first row
-    this.firstRow_FileStatus = page
-        .locator('tbody tr')
-        .first();
-
-    // Action buttons
-    this.button_ConfirmFileAccepted = page.getByRole('button', {
-        name: 'CONFIRM FILE ACCEPTED'
-    });
-
-    this.button_CancelFile = page.getByRole('button', {
-        name: 'CANCEL FILE'
-    });
+    button_ShowBankFiles: Locator;
+    button_ConfirmFileAccepted: Locator;
+    button_CancelFile: Locator;
 
     // Popup buttons
-    this.button_Yes = page.getByRole('button', {
-        name: 'YES'
-    });
+    button_Yes: Locator;
+    button_No: Locator;
 
-    this.button_No = page.getByRole('button', {
-        name: 'NO'
-    });
-}
+    // Checkbox
+    checkbox_FirstSubmitRow: Locator;
 
+    // Table row
+    firstRow_FileStatus: Locator;
 
-// ======================================
-// FUNCTION 1
-// ======================================
+    constructor(page: Page) {
 
-async selectSubmitFiltersAndShowBankFiles() {
+        this.page = page;
 
-    await this.tab_Review.click();
+        // Menu
+        this.sideMenu_Submit = page.getByText('Submit', {
+            exact: true
+        });
 
-    await this.tab_Submit.click();
+        // Inputs
+        this.input_FromDate = page.locator('input').nth(0);
 
-    const today = new Date();
+        this.input_ToDate = page.locator('input').nth(1);
 
-    const firstDay = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-    );
+        // Dropdowns
+        this.dropdown_Bank = page.locator('.mud-select').nth(0);
 
-    const lastDay = new Date(
-        today.getFullYear(),
-        today.getMonth() + 1,
-        0
-    );
+        this.dropdown_Status = page.locator('.mud-select').nth(1);
 
-    const formatDate = (date) => {
-        return date.toLocaleDateString('en-GB');
-    };
+        // Buttons
+        this.button_ShowBankFiles = page.getByRole('button', {
+            name: 'SHOW BANK FILES'
+        });
 
-    // Enter dates
-    await this.input_FromDate.fill(
-        formatDate(firstDay)
-    );
+        this.button_ConfirmFileAccepted = page.getByRole('button', {
+            name: 'CONFIRM FILE ACCEPTED'
+        });
 
-    await this.input_ToDate.fill(
-        formatDate(lastDay)
-    );
+        this.button_CancelFile = page.getByRole('button', {
+            name: 'CANCEL FILE'
+        });
 
-    // Select Bank
-    await this.dropdown_Bank.click();
+        // Popup buttons
+        this.button_Yes = page.getByRole('button', {
+            name: 'YES'
+        });
 
-    await this.page.getByText('CBA', {
-        exact: true
-    }).click();
+        this.button_No = page.getByRole('button', {
+            name: 'NO'
+        });
 
-    // Select Status
-    await this.dropdown_Status.click();
+        // First row checkbox
+        this.checkbox_FirstSubmitRow = page
+            .locator('tbody tr')
+            .nth(0)
+            .locator('input.mud-checkbox-input');
 
-    await this.page.getByText('Generated', {
-        exact: true
-    }).click();
-
-    // Click Show Bank Files
-    const [response] = await Promise.all([
-
-        this.page.waitForResponse(response =>
-            response.url().includes('/GetFileData') &&
-            response.status() === 200
-        ),
-
-        this.button_ShowBankFiles.click()
-
-    ]);
-
-    expect(response.status()).toBe(200);
-
-    // Validate first row FileStatus
-    await expect(
-        this.firstRow_FileStatus
-    ).toContainText('Generated');
-
-    console.log(
-        'Show Bank Files API and Generated status validated successfully'
-    );
-}
-
-
-// ======================================
-// FUNCTION 2
-// ======================================
-
-async validateSubmitTableHeadersAndNoButtonFunctionality() {
-
-    const expectedHeaders = [
-
-        'Bank',
-        'EmployerCode',
-        'FileType',
-        'File Total',
-        'FileName',
-        'File Reference',
-        'FileStatus',
-        'Date Created',
-        'BankBalance',
-        'Check'
-
-    ];
-
-    // Validate table headers
-    for (const header of expectedHeaders) {
-
-        await expect(
-            this.page.getByText(header, {
-                exact: true
-            })
-        ).toBeVisible();
-
+        // First row
+        this.firstRow_FileStatus = page
+            .locator('tbody tr')
+            .first();
     }
 
-    // Select first checkbox
-    await this.checkbox_FirstSubmitRow.click({
-        force: true
-    });
 
-    // Validate buttons enabled
-    await expect(
-        this.button_ConfirmFileAccepted
-    ).toBeEnabled();
+    // ==========================================
+    // CLICK SUBMIT MENU
+    // ==========================================
 
-    await expect(
-        this.button_CancelFile
-    ).toBeEnabled();
+    async clickSubmitMenu() {
 
-    // ==================================
-    // Confirm File Accepted -> NO
-    // ==================================
+        await this.sideMenu_Submit.waitFor({
+            state: 'visible'
+        });
 
-    await this.button_ConfirmFileAccepted.click();
+        await this.sideMenu_Submit.click();
+    }
 
-    await expect(
-        this.page.getByText('Confirm Files')
-    ).toBeVisible();
 
-    await this.button_No.click();
+    // ==========================================
+    // SELECT FILTERS AND SHOW BANK FILES
+    // ==========================================
 
-    // ==================================
-    // Cancel File -> NO
-    // ==================================
+    async selectSubmitFiltersAndShowBankFiles() {
 
-    await this.button_CancelFile.click();
+        const today = new Date();
 
-    await expect(
-        this.page.getByText('Cancel Files')
-    ).toBeVisible();
+        const firstDay = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            1
+        );
 
-    await this.button_No.click();
+        const lastDay = new Date(
+            today.getFullYear(),
+            today.getMonth() + 1,
+            0
+        );
 
-    console.log(
-        'Submit table headers and NO button functionality validated successfully'
-    );
+        const formatDate = (date: Date) => {
+            return date.toLocaleDateString('en-GB');
+        };
+
+        // Enter From Date
+        await this.input_FromDate.fill(
+            formatDate(firstDay)
+        );
+
+        // Enter To Date
+        await this.input_ToDate.fill(
+            formatDate(lastDay)
+        );
+
+        // Select Bank = CBA
+        await this.dropdown_Bank.click();
+
+        await this.page.getByText('CBA', {
+            exact: true
+        }).click();
+
+        // Select Status = Generated
+        await this.dropdown_Status.click();
+
+        await this.page.getByText('Generated', {
+            exact: true
+        }).click();
+
+        // Click Show Bank Files and validate API
+        const [response] = await Promise.all([
+
+            this.page.waitForResponse(response =>
+                response.url().includes('/GetFileData') &&
+                response.status() === 200
+            ),
+
+            this.button_ShowBankFiles.click()
+
+        ]);
+
+        expect(response.status()).toBe(200);
+
+        // Validate first row contains Generated
+        await expect(
+            this.firstRow_FileStatus
+        ).toContainText('Generated');
+
+        console.log(
+            'Show Bank Files API and Generated status validated successfully'
+        );
+    }
+
+
+    // ==========================================
+    // VALIDATE TABLE HEADERS & NO BUTTON FLOW
+    // ==========================================
+
+    async validateSubmitTableHeadersAndNoButtonFunctionality() {
+
+        const expectedHeaders = [
+
+            'Bank',
+            'EmployerCode',
+            'FileType',
+            'File Total',
+            'FileName',
+            'File Reference',
+            'FileStatus',
+            'Date Created',
+            'BankBalance',
+            'Check'
+
+        ];
+
+        // Validate table headers
+        for (const header of expectedHeaders) {
+
+            await expect(
+                this.page.getByText(header, {
+                    exact: true
+                })
+            ).toBeVisible();
+
+        }
+
+        // Select first checkbox
+        await this.checkbox_FirstSubmitRow.click({
+            force: true
+        });
+
+        // Validate buttons enabled
+        await expect(
+            this.button_ConfirmFileAccepted
+        ).toBeEnabled();
+
+        await expect(
+            this.button_CancelFile
+        ).toBeEnabled();
+
+        // ==================================
+        // Confirm File Accepted -> NO
+        // ==================================
+
+        await this.button_ConfirmFileAccepted.click();
+
+        await expect(
+            this.page.getByText('Confirm Files')
+        ).toBeVisible();
+
+        await this.button_No.click();
+
+        // ==================================
+        // Cancel File -> NO
+        // ==================================
+
+        await this.button_CancelFile.click();
+
+        await expect(
+            this.page.getByText('Cancel Files')
+        ).toBeVisible();
+
+        await this.button_No.click();
+
+        console.log(
+            'Submit table headers and NO button functionality validated successfully'
+        );
+    }
 }
