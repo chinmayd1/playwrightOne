@@ -4,10 +4,14 @@ export default class submitTab {
 
     page: Page;
 
+    // =========================================
+    // LOCATORS
+    // =========================================
+
     // Menu
     sideMenu_Submit: Locator;
 
-    // Inputs
+    // Date Inputs
     input_FromDate: Locator;
     input_ToDate: Locator;
 
@@ -15,41 +19,69 @@ export default class submitTab {
     dropdown_Bank: Locator;
     dropdown_Status: Locator;
 
+    // Dropdown Options
+    option_CBA: Locator;
+    option_Generated: Locator;
+
     // Buttons
     button_ShowBankFiles: Locator;
     button_ConfirmFileAccepted: Locator;
     button_CancelFile: Locator;
 
-    // Popup buttons
+    // Popup Buttons
     button_Yes: Locator;
     button_No: Locator;
 
     // Checkbox
     checkbox_FirstSubmitRow: Locator;
 
-    // Table row
+    // Table Row
     firstRow_FileStatus: Locator;
 
     constructor(page: Page) {
 
         this.page = page;
 
-        // Menu
+        // =========================================
+        // MENU
+        // =========================================
+
         this.sideMenu_Submit = page.getByText('Submit', {
             exact: true
         });
 
-        // Inputs
-        this.input_FromDate = page.locator('input').nth(0);
+        // =========================================
+        // DATE INPUTS
+        // =========================================
 
-        this.input_ToDate = page.locator('input').nth(1);
+        this.input_FromDate = page.getByLabel('From Date');
 
-        // Dropdowns
-        this.dropdown_Bank = page.locator('.mud-select').nth(0);
+        this.input_ToDate = page.getByLabel('To Date');
 
-        this.dropdown_Status = page.locator('.mud-select').nth(1);
+        // =========================================
+        // DROPDOWNS
+        // =========================================
 
-        // Buttons
+        this.dropdown_Bank = page.locator('input[aria-label="Bank"]');
+
+        this.dropdown_Status = page.locator('input[aria-label="Status"]');
+
+        // =========================================
+        // DROPDOWN OPTIONS
+        // =========================================
+
+        this.option_CBA = page.getByRole('option', {
+            name: 'CBA'
+        });
+
+        this.option_Generated = page.getByRole('option', {
+            name: 'Generated'
+        });
+
+        // =========================================
+        // BUTTONS
+        // =========================================
+
         this.button_ShowBankFiles = page.getByRole('button', {
             name: 'SHOW BANK FILES'
         });
@@ -62,7 +94,10 @@ export default class submitTab {
             name: 'CANCEL FILE'
         });
 
-        // Popup buttons
+        // =========================================
+        // POPUP BUTTONS
+        // =========================================
+
         this.button_Yes = page.getByRole('button', {
             name: 'YES'
         });
@@ -71,22 +106,27 @@ export default class submitTab {
             name: 'NO'
         });
 
-        // First row checkbox
+        // =========================================
+        // CHECKBOX
+        // =========================================
+
         this.checkbox_FirstSubmitRow = page
             .locator('tbody tr')
             .nth(0)
             .locator('input.mud-checkbox-input');
 
-        // First row
+        // =========================================
+        // FIRST ROW
+        // =========================================
+
         this.firstRow_FileStatus = page
             .locator('tbody tr')
             .first();
     }
 
-
-    // ==========================================
+    // =========================================
     // CLICK SUBMIT MENU
-    // ==========================================
+    // =========================================
 
     async clickSubmitMenu() {
 
@@ -97,56 +137,88 @@ export default class submitTab {
         await this.sideMenu_Submit.click();
     }
 
-
-    // ==========================================
+    // =========================================
     // SELECT FILTERS AND SHOW BANK FILES
-    // ==========================================
+    // =========================================
 
     async selectSubmitFiltersAndShowBankFiles() {
 
         const today = new Date();
 
+        // First day of current month
         const firstDay = new Date(
             today.getFullYear(),
             today.getMonth(),
             1
         );
 
+        // Last day of current month
         const lastDay = new Date(
             today.getFullYear(),
             today.getMonth() + 1,
             0
         );
 
+        // Format DD/MM/YYYY
         const formatDate = (date: Date) => {
-            return date.toLocaleDateString('en-GB');
+
+            const day = String(
+                date.getDate()
+            ).padStart(2, '0');
+
+            const month = String(
+                date.getMonth() + 1
+            ).padStart(2, '0');
+
+            const year = date.getFullYear();
+
+            return `${day}/${month}/${year}`;
         };
 
-        // Enter From Date
+        // =========================================
+        // ENTER FROM DATE
+        // =========================================
+
+        await this.input_FromDate.click();
+
+        await this.input_FromDate.press('Control+A');
+
         await this.input_FromDate.fill(
             formatDate(firstDay)
         );
 
-        // Enter To Date
+        // =========================================
+        // ENTER TO DATE
+        // =========================================
+
+        await this.input_ToDate.click();
+
+        await this.input_ToDate.press('Control+A');
+
         await this.input_ToDate.fill(
             formatDate(lastDay)
         );
 
-        // Select Bank = CBA
+        // =========================================
+        // SELECT BANK = CBA
+        // =========================================
+
         await this.dropdown_Bank.click();
 
-        await this.page.getByText('CBA', {
-            exact: true
-        }).click();
+        await this.option_CBA.click();
 
-        // Select Status = Generated
+        // =========================================
+        // SELECT STATUS = GENERATED
+        // =========================================
+
         await this.dropdown_Status.click();
 
-        await this.page.getByText('Generated', {
-            exact: true
-        }).click();
+        await this.option_Generated.click();
 
-        // Click Show Bank Files and validate API
+        // =========================================
+        // CLICK SHOW BANK FILES
+        // =========================================
+
         const [response] = await Promise.all([
 
             this.page.waitForResponse(response =>
@@ -160,7 +232,10 @@ export default class submitTab {
 
         expect(response.status()).toBe(200);
 
-        // Validate first row contains Generated
+        // =========================================
+        // VALIDATE FIRST ROW FILE STATUS
+        // =========================================
+
         await expect(
             this.firstRow_FileStatus
         ).toContainText('Generated');
@@ -170,10 +245,9 @@ export default class submitTab {
         );
     }
 
-
-    // ==========================================
+    // =========================================
     // VALIDATE TABLE HEADERS & NO BUTTON FLOW
-    // ==========================================
+    // =========================================
 
     async validateSubmitTableHeadersAndNoButtonFunctionality() {
 
@@ -192,7 +266,10 @@ export default class submitTab {
 
         ];
 
-        // Validate table headers
+        // =========================================
+        // VALIDATE TABLE HEADERS
+        // =========================================
+
         for (const header of expectedHeaders) {
 
             await expect(
@@ -200,15 +277,20 @@ export default class submitTab {
                     exact: true
                 })
             ).toBeVisible();
-
         }
 
-        // Select first checkbox
+        // =========================================
+        // SELECT FIRST ROW CHECKBOX
+        // =========================================
+
         await this.checkbox_FirstSubmitRow.click({
             force: true
         });
 
-        // Validate buttons enabled
+        // =========================================
+        // VALIDATE BUTTONS ENABLED
+        // =========================================
+
         await expect(
             this.button_ConfirmFileAccepted
         ).toBeEnabled();
@@ -217,9 +299,9 @@ export default class submitTab {
             this.button_CancelFile
         ).toBeEnabled();
 
-        // ==================================
-        // Confirm File Accepted -> NO
-        // ==================================
+        // =========================================
+        // CONFIRM FILE ACCEPTED -> NO
+        // =========================================
 
         await this.button_ConfirmFileAccepted.click();
 
@@ -229,9 +311,9 @@ export default class submitTab {
 
         await this.button_No.click();
 
-        // ==================================
-        // Cancel File -> NO
-        // ==================================
+        // =========================================
+        // CANCEL FILE -> NO
+        // =========================================
 
         await this.button_CancelFile.click();
 
@@ -246,3 +328,5 @@ export default class submitTab {
         );
     }
 }
+
+//
