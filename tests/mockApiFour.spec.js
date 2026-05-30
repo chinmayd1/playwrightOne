@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 import tags from '../tests/testdata/tags.json'
 let responseBody;
-test.only('has title', async ({ page }) => {
+test('has title', async ({ page }) => {
     //console.log(tags)
     await page.route('**/api/articles*', async (route)=>{
        let response = await route.fetch();
