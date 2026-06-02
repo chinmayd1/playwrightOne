@@ -9,7 +9,7 @@ test.beforeEach(async({page})=>{
     await page.locator('button').click()
 })
 
-test.only('delete the article testcase', async ({ page ,request}) => {
+test('delete the article testcase', async ({ page ,request}) => {
     // call the login api to get the token 
     let response  = await request.post('https://conduit-api.bondaracademy.com/api/users/login',{
         data:{"user":{"email":"minskoleopc@gmail.com","password":"minskole123"}}
