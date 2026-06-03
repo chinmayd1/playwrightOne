@@ -128,3 +128,43 @@ await configureEmployerPaycode.validateSavePayCode(payCode, true);
 
 
 /////////////////////////////////////////////////////////////////////////
+
+generateRandomPayCode(
+  deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage',
+  existingPayCodes: string[] = []
+): string {
+
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+  let prefix = '';
+
+  switch (deductionType) {
+    case 'Pre Tax':
+      prefix = 'PR';
+      break;
+
+    case 'Post Tax':
+      prefix = 'PT';
+      break;
+
+    case 'Percentage':
+      prefix = 'P';
+      break;
+  }
+
+  let payCode = '';
+
+  do {
+    const randomPartLength = 4 - prefix.length;
+
+    const randomPart = Array.from(
+      { length: randomPartLength },
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
+
+    payCode = `${prefix}${randomPart}`;
+
+  } while (existingPayCodes.includes(payCode));
+
+  return payCode;
+}
