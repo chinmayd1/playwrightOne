@@ -1,121 +1,130 @@
-import { Page, expect } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 
-export default class ConfigureEmployerPaycode {
-  page: Page;
+export class ConfigureEmployerPaycode {
+  constructor(private page: Page) {}
 
-  constructor(page: Page) {
-    this.page = page;
+  private btnSave = '//button[text()="SAVE" or text()="Save"]';
+  private payCodeColumnCells = '//table//tbody//tr//td[1]';
+
+  generatePayCode(
+    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage',
+    existingPayCodes: string[]
+  ): string {
+    let prefix: string;
+    let maxNumber: number;
+
+    switch (deductionType) {
+      case 'Pre Tax':
+        prefix = 'PRT';
+        maxNumber = 9;
+        break;
+
+      case 'Post Tax':
+        prefix = 'PT';
+        maxNumber = 99;
+        break;
+
+      case 'Percentage':
+        prefix = 'P';
+        maxNumber = 999;
+        break;
+    }
+
+    for (let i = 1; i <= maxNumber; i++) {
+      const numberPart =
+        deductionType === 'Pre Tax'
+          ? i.toString()
+          : deductionType === 'Post Tax'
+            ? i.toString().padStart(2, '0')
+            : i.toString().padStart(3, '0');
+
+      const payCode = `${prefix}${numberPart}`;
+
+      if (!existingPayCodes.includes(payCode)) {
+        return payCode;
+      }
+    }
+
+    throw new Error(`No unique paycode available for ${deductionType}`);
   }
 
-  tabPayCodes = "//button[contains(.,'PAY CODES')]";
-  tabPreTax = "//button[contains(.,'PRE TAX')]";
-  tabPostTax = "//button[contains(.,'POST TAX')]";
-  tabPercentage = "//button[contains(.,'PERCENTAGE')]";
-
-  drpPaygroup = "(//input[@readonly])[1]";
-  drpTransactionType = "(//input[@readonly])[2]";
-
-  btnAdd = "//button[contains(.,'ADD')]";
-  btnSave = "//button[contains(.,'SAVE')]";
-
-  txtPayCode = "//input[contains(@id,'PayCode')]";
-  txtDescription = "//input[contains(@id,'Description')]";
-  drpDeductionType = "//input[contains(@id,'DeductionType')]";
-  chkDefault = "//input[@type='checkbox']";
-
-  async selectPaygroup(payGroup: string) {
-    await this.page.locator(this.drpPaygroup).click();
-    await this.page.getByText(payGroup, { exact: true }).click();
+  async getExistingPayCodesFromGrid(): Promise<string[]> {
+    return await this.page
+      .locator(this.payCodeColumnCells)
+      .allTextContents();
   }
 
-  async selectTransactionType(transactionType: string) {
-    await this.page.locator(this.drpTransactionType).click();
-    await this.page.getByText(transactionType, { exact: true }).click();
+  async getUniquePayCode(
+    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
+  ): Promise<string> {
+    const existingPayCodes = await this.getExistingPayCodesFromGrid();
+
+    return this.generatePayCode(
+      deductionType,
+      existingPayCodes.map(x => x.trim())
+    );
   }
 
-  async validateTabs() {
-    await expect(this.page.locator(this.tabPayCodes)).toBeVisible();
-    await expect(this.page.locator(this.tabPreTax)).toBeVisible();
-    await expect(this.page.locator(this.tabPostTax)).toBeVisible();
-    await expect(this.page.locator(this.tabPercentage)).toBeVisible();
-  }
+  async validateSavePayCode(
+    payCode: string,
+    isDefaultExpected: boolean
+  ): Promise<void> {
+    const saveResponsePromise = this.page.waitForResponse(response =>
+      response.url().includes('/api/SavePayCodes') &&
+      response.request().method() === 'POST'
+    );
 
-  async clickAddButton() {
-    await this.page.locator(this.tabPayCodes).click();
-    await this.page.locator(this.btnAdd).click();
-  }
+    await this.page.locator(this.btnSave).click();
 
-  async enterPaycodeDetails(TestData: any) {
-    await this.page.locator(this.txtPayCode).fill(TestData.payCode);
-    await this.page.locator(this.txtDescription).fill(TestData.description);
+    const saveResponse = await saveResponsePromise;
 
-    await this.page.locator(this.drpDeductionType).click();
-    await this.page.getByText(TestData.deductionType, { exact: true }).click();
+    expect(saveResponse.status()).toBe(200);
+    expect(saveResponse.ok()).toBeTruthy();
 
-    if (TestData.default === true) {
-      await this.page.locator(this.chkDefault).first().check();
+    const getResponse = await this.page.waitForResponse(response =>
+      response.url().includes('/api/GetPayCodes') &&
+      response.request().method() === 'GET'
+    );
+
+    expect(getResponse.status()).toBe(200);
+    expect(getResponse.ok()).toBeTruthy();
+
+    const responseBody = await getResponse.json();
+
+    const addedPayCode = responseBody.find(
+      (item: any) => item.payCode === payCode
+    );
+
+    expect(addedPayCode).toBeDefined();
+    expect(addedPayCode.payCode).toBe(payCode);
+    expect(addedPayCode.status).toBe('Active');
+
+    const defaultPayCodes = responseBody.filter(
+      (item: any) => item.isDefault === true
+    );
+
+    expect(defaultPayCodes.length).toBe(1);
+
+    if (isDefaultExpected) {
+      expect(addedPayCode.isDefault).toBe(true);
+      expect(defaultPayCodes[0].payCode).toBe(payCode);
     }
   }
-
-  async clickSave() {
-    await this.page.locator(this.btnSave).click();
-  }
 }
+/////////////////////////////////////////////////////////////////
 
-import { Page } from '@playwright/test';
-import ConfigureEmployerPaycode from '../../page-objects/EmployerPaycode/configure-employer-paycode';
 
-let parentPage: Page;
-let paycodePage: Page;
-let configureEmployerPaycodeObj: ConfigureEmployerPaycode;
+const deductionType = 'Percentage';
 
-parentPage = page;
+const payCode =
+  await configureEmployerPaycode.getUniquePayCode(deductionType);
 
-await step('Click Benefits and Paycode mapping link', async () => {
-  [paycodePage] = await Promise.all([
-    parentPage.context().waitForEvent('page'),
-    EmpSettings_ImportExportConfig.clickOnPaycodeMappingLink()
-  ]);
+// fill PayCode field with payCode
+// fill Description
+// select Deduction Type
+// tick Default checkbox if required
 
-  await paycodePage.waitForLoadState('networkidle');
+await configureEmployerPaycode.validateSavePayCode(payCode, true);
 
-  configureEmployerPaycodeObj =
-    new ConfigureEmployerPaycode(paycodePage);
-});
 
-await step('Select Paygroup', async () => {
-  await configureEmployerPaycodeObj.selectPaygroup(TestData.payGroup);
-});
-
-await step('Select Transaction Type Export', async () => {
-  await configureEmployerPaycodeObj.selectTransactionType(TestData.transactionType);
-});
-
-await step('Validate Tabs', async () => {
-  await configureEmployerPaycodeObj.validateTabs();
-});
-
-await step('Click Add Button', async () => {
-  await configureEmployerPaycodeObj.clickAddButton();
-});
-
-await step('Enter Paycode Details', async () => {
-  await configureEmployerPaycodeObj.enterPaycodeDetails(TestData);
-});
-
-await step('Save Paycode', async () => {
-  await configureEmployerPaycodeObj.clickSave();
-});
-
-await step('Back To Parent Page', async () => {
-  await paycodePage.close();
-  await parentPage.bringToFront();
-});
-"employerPaycodePercentage": {
-  "payGroup": "COM17CAS",
-  "transactionType": "Export",
-  "payCode": "D235",
-  "description": "EDUCATION",
-  "deductionType": "Percentage",
-  "default": true
-}
+/////////////////////////////////////////////////////////////////////////
