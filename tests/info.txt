@@ -168,3 +168,37 @@ generateRandomPayCode(
 
   return payCode;
 }
+
+///////////////////////////////////////////////////////////////////
+
+
+async enterPayCodeDetails(
+  payCode: string,
+  description: string,
+  deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
+) {
+  const lastRow = this.page.locator('tr.mud-table-row').last();
+
+  await lastRow
+    .locator('td[data-label="PayCode"] input')
+    .fill(payCode);
+
+  await lastRow
+    .locator('td[data-label="Description"] input')
+    .fill(description);
+
+  await lastRow
+    .locator('td[data-label="DeductionType"] .mud-select-input')
+    .click();
+
+  await this.page
+    .locator('.mud-popover')
+    .getByText(deductionType, { exact: true })
+    .click();
+}
+
+await configureEmployerPaycode.enterPayCodeDetails(
+  payCode,
+  payCode,
+  'Percentage'
+);
