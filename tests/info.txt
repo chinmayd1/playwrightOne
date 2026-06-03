@@ -1,1 +1,121 @@
-no
+import { Page, expect } from '@playwright/test';
+
+export default class ConfigureEmployerPaycode {
+  page: Page;
+
+  constructor(page: Page) {
+    this.page = page;
+  }
+
+  tabPayCodes = "//button[contains(.,'PAY CODES')]";
+  tabPreTax = "//button[contains(.,'PRE TAX')]";
+  tabPostTax = "//button[contains(.,'POST TAX')]";
+  tabPercentage = "//button[contains(.,'PERCENTAGE')]";
+
+  drpPaygroup = "(//input[@readonly])[1]";
+  drpTransactionType = "(//input[@readonly])[2]";
+
+  btnAdd = "//button[contains(.,'ADD')]";
+  btnSave = "//button[contains(.,'SAVE')]";
+
+  txtPayCode = "//input[contains(@id,'PayCode')]";
+  txtDescription = "//input[contains(@id,'Description')]";
+  drpDeductionType = "//input[contains(@id,'DeductionType')]";
+  chkDefault = "//input[@type='checkbox']";
+
+  async selectPaygroup(payGroup: string) {
+    await this.page.locator(this.drpPaygroup).click();
+    await this.page.getByText(payGroup, { exact: true }).click();
+  }
+
+  async selectTransactionType(transactionType: string) {
+    await this.page.locator(this.drpTransactionType).click();
+    await this.page.getByText(transactionType, { exact: true }).click();
+  }
+
+  async validateTabs() {
+    await expect(this.page.locator(this.tabPayCodes)).toBeVisible();
+    await expect(this.page.locator(this.tabPreTax)).toBeVisible();
+    await expect(this.page.locator(this.tabPostTax)).toBeVisible();
+    await expect(this.page.locator(this.tabPercentage)).toBeVisible();
+  }
+
+  async clickAddButton() {
+    await this.page.locator(this.tabPayCodes).click();
+    await this.page.locator(this.btnAdd).click();
+  }
+
+  async enterPaycodeDetails(TestData: any) {
+    await this.page.locator(this.txtPayCode).fill(TestData.payCode);
+    await this.page.locator(this.txtDescription).fill(TestData.description);
+
+    await this.page.locator(this.drpDeductionType).click();
+    await this.page.getByText(TestData.deductionType, { exact: true }).click();
+
+    if (TestData.default === true) {
+      await this.page.locator(this.chkDefault).first().check();
+    }
+  }
+
+  async clickSave() {
+    await this.page.locator(this.btnSave).click();
+  }
+}
+
+import { Page } from '@playwright/test';
+import ConfigureEmployerPaycode from '../../page-objects/EmployerPaycode/configure-employer-paycode';
+
+let parentPage: Page;
+let paycodePage: Page;
+let configureEmployerPaycodeObj: ConfigureEmployerPaycode;
+
+parentPage = page;
+
+await step('Click Benefits and Paycode mapping link', async () => {
+  [paycodePage] = await Promise.all([
+    parentPage.context().waitForEvent('page'),
+    EmpSettings_ImportExportConfig.clickOnPaycodeMappingLink()
+  ]);
+
+  await paycodePage.waitForLoadState('networkidle');
+
+  configureEmployerPaycodeObj =
+    new ConfigureEmployerPaycode(paycodePage);
+});
+
+await step('Select Paygroup', async () => {
+  await configureEmployerPaycodeObj.selectPaygroup(TestData.payGroup);
+});
+
+await step('Select Transaction Type Export', async () => {
+  await configureEmployerPaycodeObj.selectTransactionType(TestData.transactionType);
+});
+
+await step('Validate Tabs', async () => {
+  await configureEmployerPaycodeObj.validateTabs();
+});
+
+await step('Click Add Button', async () => {
+  await configureEmployerPaycodeObj.clickAddButton();
+});
+
+await step('Enter Paycode Details', async () => {
+  await configureEmployerPaycodeObj.enterPaycodeDetails(TestData);
+});
+
+await step('Save Paycode', async () => {
+  await configureEmployerPaycodeObj.clickSave();
+});
+
+await step('Back To Parent Page', async () => {
+  await paycodePage.close();
+  await parentPage.bringToFront();
+});
+"employerPaycodePercentage": {
+  "payGroup": "COM17CAS",
+  "transactionType": "Export",
+  "payCode": "D235",
+  "description": "EDUCATION",
+  "deductionType": "Percentage",
+  "default": true
+}
