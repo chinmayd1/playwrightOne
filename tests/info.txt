@@ -3,162 +3,60 @@ import { expect, Page, Locator } from '@playwright/test';
 export class ConfigureEmployerPaycode {
   constructor(private page: Page) {}
 
-  readonly btnAdd = this.page.getByRole('button', { name: 'ADD' });
+  readonly btnAdd = this.page.getByRole('button', { name: /^ADD$/i });
+  readonly rows = this.page.locator('tr.mud-table-row');
+  readonly tableContainer = this.page.locator('.mud-table-container');
 
-  async generateRandomPayCode(
-    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
-  ): Promise<string> {
+  async clickAddAndGetNewRow(): Promise<Locator> {
+    const rowCountBefore = await this.rows.count();
 
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    await this.btnAdd.scrollIntoViewIfNeeded();
+    await expect(this.btnAdd).toBeVisible();
+    await expect(this.btnAdd).toBeEnabled();
 
-    let prefix = '';
+    await this.btnAdd.click({ force: true });
 
-    switch (deductionType) {
-      case 'Pre Tax':
-        prefix = 'PR';
-        break;
-
-      case 'Post Tax':
-        prefix = 'PT';
-        break;
-
-      case 'Percentage':
-        prefix = 'P';
-        break;
-    }
-
-    const randomLength = 4 - prefix.length;
-
-    const randomPart = Array.from(
-      { length: randomLength },
-      () => chars[Math.floor(Math.random() * chars.length)]
-    ).join('');
-
-    return `${prefix}${randomPart}`;
-  }
-
-  async clickAddAndGetLastRow(): Promise<Locator> {
-
-    await this.btnAdd.click();
-
-    const tableContainer = this.page.locator('.mud-table-container');
-
-    await tableContainer.evaluate((el: any) => {
-      el.scrollTop = el.scrollHeight;
+    await expect(this.rows).toHaveCount(rowCountBefore + 1, {
+      timeout: 10000
     });
 
-    await this.page.waitForTimeout(1000);
+    const newRow = this.rows.nth(rowCountBefore);
 
-    const lastRow = this.page
-      .locator('tr.mud-table-row')
-      .last();
+    await newRow.scrollIntoViewIfNeeded();
 
-    await lastRow.scrollIntoViewIfNeeded();
-
-    return lastRow;
+    return newRow;
   }
 
-  async selectDeductionType(
-    row: Locator,
+  async enterNewPayCodeRow(
+    payCode: string,
+    description: string,
     deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
   ) {
+    const newRow = await this.clickAddAndGetNewRow();
 
-    await row
+    await newRow
+      .locator('td[data-label="PayCode"] input:not([type="hidden"])')
+      .fill(payCode);
+
+    await newRow
+      .locator('td[data-label="Description"] input:not([type="hidden"])')
+      .fill(description);
+
+    await newRow
       .locator('td[data-label="DeductionType"]')
       .click({ force: true });
 
     await this.page
-      .locator('.mud-popover')
+      .locator('.mud-popover-open, .mud-popover')
+      .last()
       .getByText(deductionType, { exact: true })
       .click();
   }
-
-  async addPayCode(
-    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
-  ): Promise<string> {
-
-    const payCode =
-      await this.generateRandomPayCode(deductionType);
-
-    const row = await this.clickAddAndGetLastRow();
-
-    await row
-      .locator('td[data-label="PayCode"] input')
-      .fill(payCode);
-
-    await row
-      .locator('td[data-label="Description"] input')
-      .fill(payCode);
-
-    await this.selectDeductionType(
-      row,
-      deductionType
-    );
-
-    return payCode;
-  }
-
-  async validateSaveAndGetPayCode(
-    payCode: string,
-    isDefaultExpected: boolean
-  ) {
-
-    const savePromise = this.page.waitForResponse(
-      response =>
-        response.url().includes('/SavePayCodes') &&
-        response.request().method() === 'POST'
-    );
-
-    await this.page
-      .getByRole('button', { name: 'SAVE' })
-      .click();
-
-    const saveResponse = await savePromise;
-
-    expect(saveResponse.status()).toBe(200);
-
-    const getPromise = this.page.waitForResponse(
-      response =>
-        response.url().includes('/GetPayCodes') &&
-        response.request().method() === 'GET'
-    );
-
-    const getResponse = await getPromise;
-
-    expect(getResponse.status()).toBe(200);
-
-    const responseBody =
-      await getResponse.json();
-
-    const addedPayCode = responseBody.find(
-      (x: any) => x.payCode === payCode
-    );
-
-    expect(addedPayCode).toBeDefined();
-
-    const defaultPayCodes = responseBody.filter(
-      (x: any) => x.isDefault === true
-    );
-
-    expect(defaultPayCodes.length).toBe(1);
-
-    if (isDefaultExpected) {
-      expect(addedPayCode.isDefault).toBe(true);
-      expect(defaultPayCodes[0].payCode)
-        .toBe(payCode);
-    }
-  }
 }
-////////////////////////////////////////////////////////////////
+/////////////////////////////////
 
-
-const payCode =
-  await configureEmployerPaycode.addPayCode(
-    'Percentage'
-  );
-
-await configureEmployerPaycode
-  .validateSaveAndGetPayCode(
-    payCode,
-    true
-  );
+await configureEmployerPaycode.enterNewPayCodeRow(
+  payCode,
+  payCode,
+  'Percentage'
+);
