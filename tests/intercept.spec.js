@@ -1,7 +1,7 @@
 
 import { test, expect } from '@playwright/test';
 
-test.only('intercept -- waiting for API request and validation on UI', async ({ page }) => { 
+test('intercept -- waiting for API request and validation on UI', async ({ page }) => { 
     // listerner
     const reponsePromise = page.waitForResponse(response => response.url().includes('api/tags') && response.status() == 200);
     await page.goto('https://conduit.bondaracademy.com/')
