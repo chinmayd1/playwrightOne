@@ -1,36 +1,51 @@
-readonly btnAdd = this.page.locator('button:has-text("Add")');
+async clickAddButton() {
+  const addButton = this.page.locator('button.mud-button-root:has-text("Add")');
 
-async clickAddAndGetNewRow() {
-  const rows = this.page.locator('tr.mud-table-row');
-  const beforeCount = await rows.count();
+  await addButton.scrollIntoViewIfNeeded();
+  await expect(addButton).toBeVisible();
 
-  await this.btnAdd.scrollIntoViewIfNeeded();
-  await expect(this.btnAdd).toBeVisible();
-  await expect(this.btnAdd).toBeEnabled();
+  const box = await addButton.boundingBox();
+  if (!box) throw new Error('Add button not found');
 
-  await this.btnAdd.click({ force: true });
+  await this.page.mouse.move(
+    box.x + box.width / 2,
+    box.y + box.height / 2
+  );
 
-  await expect(rows).toHaveCount(beforeCount + 1, {
-    timeout: 10000
-  });
-
-  return rows.nth(beforeCount);
+  await this.page.mouse.down();
+  await this.page.mouse.up();
 }
 
-///////////////////////////////////////////////
-
-
 async clickAddAndGetNewRow() {
   const rows = this.page.locator('tr.mud-table-row');
   const beforeCount = await rows.count();
 
-  const addButton = this.page.locator('button:has(span.mud-button-label:text("Add"))');
-
-  await addButton.evaluate((btn: HTMLElement) => btn.click());
+  await this.clickAddButton();
 
   await expect(rows).toHaveCount(beforeCount + 1, {
     timeout: 10000
   });
 
-  return rows.nth(beforeCount);
+  const newRow = rows.nth(beforeCount);
+  await newRow.scrollIntoViewIfNeeded();
+
+  return newRow;
+}
+
+async addPayCodeRow(
+  payCode: string,
+  deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
+) {
+  const row = await this.clickAddAndGetNewRow();
+
+  await row.locator('td[data-label="PayCode"] input').fill(payCode);
+  await row.locator('td[data-label="Description"] input').fill(payCode);
+
+  await row.locator('td[data-label="DeductionType"]').click({ force: true });
+
+  await this.page
+    .locator('.mud-popover-open, .mud-popover')
+    .last()
+    .getByText(deductionType, { exact: true })
+    .click();
 }
