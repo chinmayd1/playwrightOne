@@ -1,62 +1,36 @@
-import { expect, Page, Locator } from '@playwright/test';
+readonly btnAdd = this.page.locator('button:has-text("Add")');
 
-export class ConfigureEmployerPaycode {
-  constructor(private page: Page) {}
+async clickAddAndGetNewRow() {
+  const rows = this.page.locator('tr.mud-table-row');
+  const beforeCount = await rows.count();
 
-  readonly btnAdd = this.page.getByRole('button', { name: /^ADD$/i });
-  readonly rows = this.page.locator('tr.mud-table-row');
-  readonly tableContainer = this.page.locator('.mud-table-container');
+  await this.btnAdd.scrollIntoViewIfNeeded();
+  await expect(this.btnAdd).toBeVisible();
+  await expect(this.btnAdd).toBeEnabled();
 
-  async clickAddAndGetNewRow(): Promise<Locator> {
-    const rowCountBefore = await this.rows.count();
+  await this.btnAdd.click({ force: true });
 
-    await this.btnAdd.scrollIntoViewIfNeeded();
-    await expect(this.btnAdd).toBeVisible();
-    await expect(this.btnAdd).toBeEnabled();
+  await expect(rows).toHaveCount(beforeCount + 1, {
+    timeout: 10000
+  });
 
-    await this.btnAdd.click({ force: true });
-
-    await expect(this.rows).toHaveCount(rowCountBefore + 1, {
-      timeout: 10000
-    });
-
-    const newRow = this.rows.nth(rowCountBefore);
-
-    await newRow.scrollIntoViewIfNeeded();
-
-    return newRow;
-  }
-
-  async enterNewPayCodeRow(
-    payCode: string,
-    description: string,
-    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
-  ) {
-    const newRow = await this.clickAddAndGetNewRow();
-
-    await newRow
-      .locator('td[data-label="PayCode"] input:not([type="hidden"])')
-      .fill(payCode);
-
-    await newRow
-      .locator('td[data-label="Description"] input:not([type="hidden"])')
-      .fill(description);
-
-    await newRow
-      .locator('td[data-label="DeductionType"]')
-      .click({ force: true });
-
-    await this.page
-      .locator('.mud-popover-open, .mud-popover')
-      .last()
-      .getByText(deductionType, { exact: true })
-      .click();
-  }
+  return rows.nth(beforeCount);
 }
-/////////////////////////////////
 
-await configureEmployerPaycode.enterNewPayCodeRow(
-  payCode,
-  payCode,
-  'Percentage'
-);
+///////////////////////////////////////////////
+
+
+async clickAddAndGetNewRow() {
+  const rows = this.page.locator('tr.mud-table-row');
+  const beforeCount = await rows.count();
+
+  const addButton = this.page.locator('button:has(span.mud-button-label:text("Add"))');
+
+  await addButton.evaluate((btn: HTMLElement) => btn.click());
+
+  await expect(rows).toHaveCount(beforeCount + 1, {
+    timeout: 10000
+  });
+
+  return rows.nth(beforeCount);
+}
