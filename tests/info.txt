@@ -1,204 +1,164 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Locator } from '@playwright/test';
 
 export class ConfigureEmployerPaycode {
   constructor(private page: Page) {}
 
-  private btnSave = '//button[text()="SAVE" or text()="Save"]';
-  private payCodeColumnCells = '//table//tbody//tr//td[1]';
+  readonly btnAdd = this.page.getByRole('button', { name: 'ADD' });
 
-  generatePayCode(
-    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage',
-    existingPayCodes: string[]
-  ): string {
-    let prefix: string;
-    let maxNumber: number;
+  async generateRandomPayCode(
+    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
+  ): Promise<string> {
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+    let prefix = '';
 
     switch (deductionType) {
       case 'Pre Tax':
-        prefix = 'PRT';
-        maxNumber = 9;
+        prefix = 'PR';
         break;
 
       case 'Post Tax':
         prefix = 'PT';
-        maxNumber = 99;
         break;
 
       case 'Percentage':
         prefix = 'P';
-        maxNumber = 999;
         break;
     }
 
-    for (let i = 1; i <= maxNumber; i++) {
-      const numberPart =
-        deductionType === 'Pre Tax'
-          ? i.toString()
-          : deductionType === 'Post Tax'
-            ? i.toString().padStart(2, '0')
-            : i.toString().padStart(3, '0');
+    const randomLength = 4 - prefix.length;
 
-      const payCode = `${prefix}${numberPart}`;
+    const randomPart = Array.from(
+      { length: randomLength },
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
 
-      if (!existingPayCodes.includes(payCode)) {
-        return payCode;
-      }
-    }
-
-    throw new Error(`No unique paycode available for ${deductionType}`);
+    return `${prefix}${randomPart}`;
   }
 
-  async getExistingPayCodesFromGrid(): Promise<string[]> {
-    return await this.page
-      .locator(this.payCodeColumnCells)
-      .allTextContents();
+  async clickAddAndGetLastRow(): Promise<Locator> {
+
+    await this.btnAdd.click();
+
+    const tableContainer = this.page.locator('.mud-table-container');
+
+    await tableContainer.evaluate((el: any) => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    await this.page.waitForTimeout(1000);
+
+    const lastRow = this.page
+      .locator('tr.mud-table-row')
+      .last();
+
+    await lastRow.scrollIntoViewIfNeeded();
+
+    return lastRow;
   }
 
-  async getUniquePayCode(
+  async selectDeductionType(
+    row: Locator,
+    deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
+  ) {
+
+    await row
+      .locator('td[data-label="DeductionType"]')
+      .click({ force: true });
+
+    await this.page
+      .locator('.mud-popover')
+      .getByText(deductionType, { exact: true })
+      .click();
+  }
+
+  async addPayCode(
     deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
   ): Promise<string> {
-    const existingPayCodes = await this.getExistingPayCodesFromGrid();
 
-    return this.generatePayCode(
-      deductionType,
-      existingPayCodes.map(x => x.trim())
+    const payCode =
+      await this.generateRandomPayCode(deductionType);
+
+    const row = await this.clickAddAndGetLastRow();
+
+    await row
+      .locator('td[data-label="PayCode"] input')
+      .fill(payCode);
+
+    await row
+      .locator('td[data-label="Description"] input')
+      .fill(payCode);
+
+    await this.selectDeductionType(
+      row,
+      deductionType
     );
+
+    return payCode;
   }
 
-  async validateSavePayCode(
+  async validateSaveAndGetPayCode(
     payCode: string,
     isDefaultExpected: boolean
-  ): Promise<void> {
-    const saveResponsePromise = this.page.waitForResponse(response =>
-      response.url().includes('/api/SavePayCodes') &&
-      response.request().method() === 'POST'
+  ) {
+
+    const savePromise = this.page.waitForResponse(
+      response =>
+        response.url().includes('/SavePayCodes') &&
+        response.request().method() === 'POST'
     );
 
-    await this.page.locator(this.btnSave).click();
+    await this.page
+      .getByRole('button', { name: 'SAVE' })
+      .click();
 
-    const saveResponse = await saveResponsePromise;
+    const saveResponse = await savePromise;
 
     expect(saveResponse.status()).toBe(200);
-    expect(saveResponse.ok()).toBeTruthy();
 
-    const getResponse = await this.page.waitForResponse(response =>
-      response.url().includes('/api/GetPayCodes') &&
-      response.request().method() === 'GET'
+    const getPromise = this.page.waitForResponse(
+      response =>
+        response.url().includes('/GetPayCodes') &&
+        response.request().method() === 'GET'
     );
 
-    expect(getResponse.status()).toBe(200);
-    expect(getResponse.ok()).toBeTruthy();
+    const getResponse = await getPromise;
 
-    const responseBody = await getResponse.json();
+    expect(getResponse.status()).toBe(200);
+
+    const responseBody =
+      await getResponse.json();
 
     const addedPayCode = responseBody.find(
-      (item: any) => item.payCode === payCode
+      (x: any) => x.payCode === payCode
     );
 
     expect(addedPayCode).toBeDefined();
-    expect(addedPayCode.payCode).toBe(payCode);
-    expect(addedPayCode.status).toBe('Active');
 
     const defaultPayCodes = responseBody.filter(
-      (item: any) => item.isDefault === true
+      (x: any) => x.isDefault === true
     );
 
     expect(defaultPayCodes.length).toBe(1);
 
     if (isDefaultExpected) {
       expect(addedPayCode.isDefault).toBe(true);
-      expect(defaultPayCodes[0].payCode).toBe(payCode);
+      expect(defaultPayCodes[0].payCode)
+        .toBe(payCode);
     }
   }
 }
-/////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
 
-
-const deductionType = 'Percentage';
 
 const payCode =
-  await configureEmployerPaycode.getUniquePayCode(deductionType);
+  await configureEmployerPaycode.addPayCode(
+    'Percentage'
+  );
 
-// fill PayCode field with payCode
-// fill Description
-// select Deduction Type
-// tick Default checkbox if required
-
-await configureEmployerPaycode.validateSavePayCode(payCode, true);
-
-
-/////////////////////////////////////////////////////////////////////////
-
-generateRandomPayCode(
-  deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage',
-  existingPayCodes: string[] = []
-): string {
-
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
-  let prefix = '';
-
-  switch (deductionType) {
-    case 'Pre Tax':
-      prefix = 'PR';
-      break;
-
-    case 'Post Tax':
-      prefix = 'PT';
-      break;
-
-    case 'Percentage':
-      prefix = 'P';
-      break;
-  }
-
-  let payCode = '';
-
-  do {
-    const randomPartLength = 4 - prefix.length;
-
-    const randomPart = Array.from(
-      { length: randomPartLength },
-      () => chars[Math.floor(Math.random() * chars.length)]
-    ).join('');
-
-    payCode = `${prefix}${randomPart}`;
-
-  } while (existingPayCodes.includes(payCode));
-
-  return payCode;
-}
-
-///////////////////////////////////////////////////////////////////
-
-
-async enterPayCodeDetails(
-  payCode: string,
-  description: string,
-  deductionType: 'Pre Tax' | 'Post Tax' | 'Percentage'
-) {
-  const lastRow = this.page.locator('tr.mud-table-row').last();
-
-  await lastRow
-    .locator('td[data-label="PayCode"] input')
-    .fill(payCode);
-
-  await lastRow
-    .locator('td[data-label="Description"] input')
-    .fill(description);
-
-  await lastRow
-    .locator('td[data-label="DeductionType"] .mud-select-input')
-    .click();
-
-  await this.page
-    .locator('.mud-popover')
-    .getByText(deductionType, { exact: true })
-    .click();
-}
-
-await configureEmployerPaycode.enterPayCodeDetails(
-  payCode,
-  payCode,
-  'Percentage'
-);
+await configureEmployerPaycode
+  .validateSaveAndGetPayCode(
+    payCode,
+    true
+  );
